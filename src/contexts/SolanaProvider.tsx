@@ -16,46 +16,33 @@ import {
 
 import { Network, useNetwork } from "./NetworkProvider";
 
-export const SolanaRpcContext = createContext<{
-  rpcEndpoints: Record<
-    Network,
-    {
-      url: string;
-      tps: number;
-    }
-  >;
-}>({
-  rpcEndpoints: {
-    mainnet: {
-      url: "https://api.mainnet-beta.solana.com",
-      tps: 0,
-    },
-    devnet: {
-      url: "https://api.devnet.solana.com",
-      tps: 0,
-    },
-    localnet: {
-      url: "http://localhost:8899",
-      tps: 0,
-    },
+interface RpcEndpoint {
+  url: string;
+  tps: number;
+}
+
+const defaultRpcEndpoints: Record<Network, RpcEndpoint> = {
+  mainnet: {
+    url: "https://api.mainnet-beta.solana.com",
+    tps: 0,
   },
-});
+  devnet: {
+    url: "https://api.devnet.solana.com",
+    tps: 0,
+  },
+  localnet: {
+    url: "http://localhost:8899",
+    tps: 0,
+  },
+};
+
+export const SolanaRpcContext = createContext<{
+  rpcEndpoints: Record<Network, RpcEndpoint>;
+}>({ rpcEndpoints: defaultRpcEndpoints });
 
 export const SolanaProvider = ({ children }: { children: React.ReactNode }) => {
-  const [rpcEndpoints, setRpcEndpoints] = useState({
-    mainnet: {
-      url: "https://api.mainnet-beta.solana.com",
-      tps: 0,
-    },
-    devnet: {
-      url: "https://api.devnet.solana.com",
-      tps: 0,
-    },
-    localnet: {
-      url: "http://localhost:8899",
-      tps: 0,
-    },
-  });
+  const [rpcEndpoints, setRpcEndpoints] =
+    useState<Record<Network, RpcEndpoint>>(defaultRpcEndpoints);
   const { network } = useNetwork();
 
   useEffect(() => {

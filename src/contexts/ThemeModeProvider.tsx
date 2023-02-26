@@ -6,7 +6,7 @@ export type ThemeMode = "light" | "dark";
 const ThemeModeContext = createContext<{
   themeMode: ThemeMode;
   setThemeMode: (mode: ThemeMode) => void;
-}>({ themeMode: "light", setThemeMode: () => {} });
+}>({ themeMode: "dark", setThemeMode: () => {} });
 
 export const ThemeModeProvider = ({
   children,
@@ -15,7 +15,7 @@ export const ThemeModeProvider = ({
 }) => {
   const [themeMode, setThemeMode] = useLocalStorage<ThemeMode>(
     "preferredThemeMode",
-    "light"
+    "dark"
   );
 
   return (
