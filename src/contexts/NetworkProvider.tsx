@@ -2,13 +2,17 @@ import { createContext, useContext } from "react";
 
 import { useLocalStorage } from "../hooks/useLocalStorage";
 
-export type Network = "devnet" | "localnet" | "mainnet";
-export const networkOptions: Network[] = ["devnet"] as Network[];
+export type Network = "mainnet" | "devnet" | "localnet";
+export const networkOptions: Network[] = [
+  "mainnet",
+  "devnet",
+  "localnet",
+] as Network[];
 
 const NetworkContext = createContext<{
   network: Network;
   setNetwork: (network: Network) => void;
-}>({ network: "devnet", setNetwork: () => {} });
+}>({ network: "mainnet", setNetwork: () => {} });
 
 export const NetworkProvider = ({
   children,
@@ -17,7 +21,7 @@ export const NetworkProvider = ({
 }) => {
   const [network, setNetwork] = useLocalStorage<Network>(
     "preferredNetwork",
-    "devnet"
+    "mainnet"
   );
 
   return (
