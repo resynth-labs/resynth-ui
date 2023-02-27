@@ -3,7 +3,8 @@
   "version": "0.1.1",
   "private": true,
   "dependencies": {
-    "@resynth/resynth-sdk": "^0.0.3",
+    "@coral-xyz/anchor": "^0.26.0",
+    "@resynth/resynth-sdk": "file:resynth-sdk.tgz",
     "@solana/wallet-adapter-react": "^0.15.20",
     "@solana/wallet-adapter-wallets": "^0.19.1",
     "@types/node": "^16.11.65",
@@ -29,7 +30,8 @@
     "deploy": "npm run build && gh-pages -d build",
     "eject": "react-app-rewired eject",
     "start": "react-app-rewired start",
-    "test": "react-app-rewired test"
+    "test": "react-app-rewired test",
+    "preinstall": "npx only-allow pnpm"
   },
   "eslintConfig": {
     "extends": [

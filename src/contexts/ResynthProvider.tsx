@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { ResynthClient } from "@resynth/resynth-sdk";
+import { marginAccountPDA, ResynthClient } from "@resynth/resynth-sdk";
 
 import { useNetwork } from "./NetworkProvider";
 
@@ -16,26 +16,22 @@ export const ResynthProvider = ({
 }) => {
   const { network } = useNetwork();
   const { connection } = useConnection();
-  const { publicKey } = useWallet();
-  const [client, setClient] = useState(
-    // new ResynthClient(network, connection, publicKey)
-    new ResynthClient(network, connection)
-  );
-  const [isClientLoading, setIsClientLoading] = useState(false);
+  const wallet = useWallet();
+  const [client, setClient] = useState(new ResynthClient(network, connection));
 
+  const [isClientLoading, setIsClientLoading] = useState(false);
   // After initial render, we can load async data from ResynthClient and reset
   useEffect(() => {
-    // setIsClientLoading(true);
-    // ResynthClient.create(network, connection, publicKey)
-    //   .then((resynth) => {
-    //     setClient(resynth);
-    //     setIsClientLoading(false);
-    //   })
-    //   .catch((err) => {
-    //     console.error(err);
-    //     setIsClientLoading(false);
-    //   });
-  }, [connection, network, publicKey]);
+    try {
+      setIsClientLoading(true);
+      const resynth = new ResynthClient(network, connection, wallet as any);
+      setClient(resynth);
+    } catch (err: unknown) {
+      console.error(err);
+    } finally {
+      setIsClientLoading(false);
+    }
+  }, [connection, network, wallet]);
 
   return (
     <ResynthContext.Provider value={{ client, isClientLoading }}>
