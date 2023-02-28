@@ -24,6 +24,3 @@ yarn-debug.log*
 yarn-error.log*
 
 *.old
-
-# local installed sdk
-/resynth-sdk.tgz

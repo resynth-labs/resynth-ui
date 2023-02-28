@@ -33,11 +33,6 @@
     "test": "react-app-rewired test",
     "preinstall": "npx only-allow pnpm"
   },
-  "eslintConfig": {
-    "extends": [
-      "react-app"
-    ]
-  },
   "browserslist": {
     "production": [
       ">0.2%",

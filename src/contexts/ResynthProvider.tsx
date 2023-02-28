@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { marginAccountPDA, ResynthClient } from "@resynth/resynth-sdk";
+import { ResynthClient } from "@resynth/resynth-sdk";
 
 import { useNetwork } from "./NetworkProvider";
 
