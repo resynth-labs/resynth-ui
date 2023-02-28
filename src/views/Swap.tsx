@@ -11,7 +11,7 @@ import { openTxInExplorer } from "../utils/explore";
 import { notify } from "../utils/notify";
 import { color, spacing } from "../styles/mixins";
 import { Flexbox, Spacer } from "../components/Layout";
-import { AccentText } from "../components/Typography";
+import { AccentText, BodyText } from "../components/Typography";
 import { Input, Select, SelectOption } from "../components/Fields";
 import { Button, PrimaryButton } from "../components/Buttons";
 import { ExternalLink, SwapArrows, UnknownToken } from "../components/Icons";
@@ -66,7 +66,7 @@ const markets = [
 ];
 const tokens: Record<string, Token> = {
   USDC: {
-    balance: BigInt(0),
+    balance: BigInt(125 * 10 ** 7),
     configuration: {
       mint: new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"),
       symbol: "USDC",
@@ -76,7 +76,7 @@ const tokens: Record<string, Token> = {
     },
   },
   nAPPL: {
-    balance: BigInt(0),
+    balance: BigInt(3.5 * 10 ** 6),
     configuration: {
       mint: PublicKey.default,
       symbol: "nAPPL",
@@ -86,6 +86,7 @@ const tokens: Record<string, Token> = {
     },
   },
 };
+// =========== Dummy data to get this rendering ===========
 
 export const Swap = () => {
   const theme = useTheme();
@@ -167,7 +168,7 @@ export const Swap = () => {
 
   // Swap type and amounts in/out
   const [swapType, setSwapType] = useState<"exactIn" | "exactOut">("exactIn");
-  // const [slippage, setSlippage] = useState<number | undefined>();
+  const [slippage, setSlippage] = useState<number | undefined>();
   const [amountIn, setAmountIn] = useState("");
   const [amountOut, setAmountOut] = useState("");
 
@@ -389,34 +390,34 @@ export const Swap = () => {
       </Flexbox>
 
       {/** SLIPPAGE **/}
-      {/* <Flexbox width="95%" flexColumn marginY="xl">
-      <AccentText>Slippage</AccentText>
-      <Spacer />
-      <Flexbox
-        width="100%"
-        alignItems="center"
-        justifyContent="space-between"
-      >
-        {[0.001, 0.005, 0.0075, 0.01].map((slipPercentage) => (
+      <Flexbox width="95%" flexColumn marginY="xl">
+        <AccentText>Slippage</AccentText>
+        <Spacer />
+        <Flexbox
+          width="100%"
+          alignItems="center"
+          justifyContent="space-between"
+        >
+          {[0.001, 0.005, 0.0075, 0.01].map((slipPercentage) => (
+            <SlippageButton
+              onClick={() => setSlippage(slipPercentage)}
+              isActive={slippage === slipPercentage}
+            >
+              <BodyText size="xs" weight="bold">
+                {slipPercentage * 100}%
+              </BodyText>
+            </SlippageButton>
+          ))}
           <SlippageButton
-            onClick={() => setSlippage(slipPercentage)}
-            isActive={slippage === slipPercentage}
+            onClick={() => setSlippage(undefined)}
+            isActive={slippage === undefined}
           >
-            <BodyText size="xs" weight="bold">
-              {slipPercentage * 100}%
+            <BodyText size="lg" weight="bold">
+              ∞
             </BodyText>
           </SlippageButton>
-        ))}
-        <SlippageButton
-          onClick={() => setSlippage(undefined)}
-          isActive={slippage === undefined}
-        >
-          <BodyText size="lg" weight="bold">
-            ∞
-          </BodyText>
-        </SlippageButton>
+        </Flexbox>
       </Flexbox>
-    </Flexbox> */}
 
       {/** SWAP BUTTON **/}
       <Spacer size="xl" />
