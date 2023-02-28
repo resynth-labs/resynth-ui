@@ -291,7 +291,6 @@ export const Swap = () => {
     }
 
     setWasTxError(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [market, amountIn, amountOut]);
 
   return (

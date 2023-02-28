@@ -69,7 +69,6 @@ export const SolanaProvider = ({ children }: { children: React.ReactNode }) => {
         setRpcEndpoints({ ...rpcEndpoints });
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const wallets = [

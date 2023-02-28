@@ -22,6 +22,27 @@ const ROUTES: {
     isDisabled: false,
   },
   {
+    path: "/",
+    label: "Pools",
+    icon: <SwapArrows color="primary" />,
+    isExternal: false,
+    isDisabled: true,
+  },
+  {
+    path: "/",
+    label: "Mint",
+    icon: <SwapArrows color="primary" />,
+    isExternal: false,
+    isDisabled: true,
+  },
+  {
+    path: "/",
+    label: "Burn",
+    icon: <SwapArrows color="primary" />,
+    isExternal: false,
+    isDisabled: true,
+  },
+  {
     path: "#",
     label: "Docs",
     icon: <Document color="primary" />,
