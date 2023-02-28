@@ -221,6 +221,7 @@ export const Swap = () => {
       // txId = await wallet.sendTransaction(swapTx, connection);
       // console.log("Successful swap: ", txId);
       throw new Error("Swap not implemented");
+      alert("Swap not implemented");
     } catch (err) {
       console.error(err);
     }
