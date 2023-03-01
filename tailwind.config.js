@@ -14,7 +14,7 @@ module.exports = {
         "skew-scroll": {
           "0%": {
             transform:
-              "rotatex(20deg) rotateZ(-20deg) skewX(20deg) translateZ(0) translateY(-30%)",
+              "rotatex(20deg) rotateZ(-20deg) skewX(20deg) translateZ(0) translateY(0%)",
           },
           "100%": {
             transform:

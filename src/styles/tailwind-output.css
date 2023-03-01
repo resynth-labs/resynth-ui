@@ -600,10 +600,6 @@ video {
   margin-bottom: 0.75rem;
 }
 
-.ml-\[100px\] {
-  margin-left: 100px;
-}
-
 .mt-\[300px\] {
   margin-top: 300px;
 }
@@ -648,16 +644,16 @@ video {
   width: 5rem;
 }
 
+.w-\[100\%\] {
+  width: 100%;
+}
+
 .w-full {
   width: 100%;
 }
 
 .w-screen {
   width: 100vw;
-}
-
-.w-\[100\%\] {
-  width: 100%;
 }
 
 .max-w-screen-lg {
@@ -671,8 +667,8 @@ video {
 
 @-webkit-keyframes skew-scroll {
   0% {
-    -webkit-transform: rotatex(20deg) rotateZ(-20deg) skewX(20deg) translateZ(0) translateY(-30%);
-            transform: rotatex(20deg) rotateZ(-20deg) skewX(20deg) translateZ(0) translateY(-30%);
+    -webkit-transform: rotatex(20deg) rotateZ(-20deg) skewX(20deg) translateZ(0) translateY(0%);
+            transform: rotatex(20deg) rotateZ(-20deg) skewX(20deg) translateZ(0) translateY(0%);
   }
 
   100% {
@@ -683,8 +679,8 @@ video {
 
 @keyframes skew-scroll {
   0% {
-    -webkit-transform: rotatex(20deg) rotateZ(-20deg) skewX(20deg) translateZ(0) translateY(-30%);
-            transform: rotatex(20deg) rotateZ(-20deg) skewX(20deg) translateZ(0) translateY(-30%);
+    -webkit-transform: rotatex(20deg) rotateZ(-20deg) skewX(20deg) translateZ(0) translateY(0%);
+            transform: rotatex(20deg) rotateZ(-20deg) skewX(20deg) translateZ(0) translateY(0%);
   }
 
   100% {
@@ -696,10 +692,6 @@ video {
 .animate-skew-scroll {
   -webkit-animation: skew-scroll 280s linear infinite;
           animation: skew-scroll 280s linear infinite;
-}
-
-.cursor-default {
-  cursor: default;
 }
 
 .grid-cols-1 {
@@ -834,14 +826,6 @@ video {
 .py-3 {
   padding-top: 0.75rem;
   padding-bottom: 0.75rem;
-}
-
-.pl-\[100px\] {
-  padding-left: 100px;
-}
-
-.pt-\[300px\] {
-  padding-top: 300px;
 }
 
 .text-center {
@@ -981,24 +965,12 @@ video {
 }
 
 @media (min-width: 640px) {
-  .sm\:w-\[100\%\] {
-    width: 100%;
-  }
-
   .sm\:grid-cols-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .sm\:text-center {
-    text-align: center;
   }
 }
 
 @media (min-width: 1024px) {
-  .lg\:mt-\[300px\] {
-    margin-top: 300px;
-  }
-
   .lg\:ml-\[100px\] {
     margin-left: 100px;
   }
