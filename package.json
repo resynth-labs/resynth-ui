@@ -27,13 +27,16 @@
   },
   "devDependencies": {
     "@types/styled-components": "^5.1.26",
-    "source-map-loader": "^4.0.1"
+    "source-map-loader": "^4.0.1",
+    "tailwindcss": "^3.2.7"
   },
   "scripts": {
-    "build": "react-app-rewired build",
+    "tailwind": "npx tailwindcss -i ./src/styles/tailwind-setup.css -o ./src/styles/tailwind-output.css",
+    "tailwind:watch": "npx tailwindcss -i ./src/styles/tailwind-setup.css -o ./src/styles/tailwind-output.css --watch",
+    "build": "yarn run tailwind && react-app-rewired build",
     "deploy": "npm run build && gh-pages -d build",
     "eject": "react-app-rewired eject",
-    "start": "react-app-rewired start",
+    "start": "react-app-rewired start & yarn run tailwind:watch",
     "test": "react-app-rewired test",
     "preinstall": "npx only-allow pnpm"
   },

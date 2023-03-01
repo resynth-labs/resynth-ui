@@ -1,4 +1,4 @@
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import styled from "styled-components";
 
 import { color, spacing } from "../../styles/mixins";
@@ -16,7 +16,7 @@ const ROUTES: {
   isDisabled: boolean;
 }[] = [
   {
-    path: "/",
+    path: "/swap",
     label: "Swap",
     icon: <SwapArrows color="primary" />,
     isExternal: false,
@@ -88,14 +88,16 @@ export const Nav = () => {
   return (
     <NavContainer alignItems="center" justifyContent="space-between">
       <Flexbox width="100%" alignItems="center" justifyContent="flex-start">
-        <Flexbox flexCentered className="desktop-logo">
-          {/* <FullLockup logomarkColor="theme" textColor="primary" /> */}
-          <Logomark color="theme" />
-          <Logo>Resynth Trade</Logo>
-        </Flexbox>
-        <Flexbox flexCentered className="mobile-logo">
-          <Logomark color="theme" />
-        </Flexbox>
+        <Link to={"/"}>
+          <Flexbox flexCentered className="desktop-logo">
+            {/* <FullLockup logomarkColor="theme" textColor="primary" /> */}
+            <Logomark color="theme" />
+            <Logo>Resynth Trade</Logo>
+          </Flexbox>
+          <Flexbox flexCentered className="mobile-logo">
+            <Logomark color="theme" />
+          </Flexbox>
+        </Link>
       </Flexbox>
       <Flexbox width="100%" flexCentered>
         {ROUTES.map((route) => (
