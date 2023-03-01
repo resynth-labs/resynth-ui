@@ -6,6 +6,7 @@ import { Button, ThemeToggleButton } from "../Buttons";
 import { Flexbox } from ".";
 import { NetworkModal, WalletModal } from "../Modals";
 import { SwapArrows, Document, Graph, FullLockup, Logomark } from "../Icons";
+import { BodyText } from "../Typography";
 
 const ROUTES: {
   path: string;
@@ -22,37 +23,16 @@ const ROUTES: {
     isDisabled: false,
   },
   {
-    path: "/",
+    path: "/stake",
+    label: "Stake",
+    icon: <SwapArrows color="primary" />,
+    isExternal: false,
+    isDisabled: true,
+  },
+  {
+    path: "/pools",
     label: "Pools",
     icon: <SwapArrows color="primary" />,
-    isExternal: false,
-    isDisabled: true,
-  },
-  {
-    path: "/",
-    label: "Mint",
-    icon: <SwapArrows color="primary" />,
-    isExternal: false,
-    isDisabled: true,
-  },
-  {
-    path: "/",
-    label: "Burn",
-    icon: <SwapArrows color="primary" />,
-    isExternal: false,
-    isDisabled: true,
-  },
-  {
-    path: "#",
-    label: "Docs",
-    icon: <Document color="primary" />,
-    isExternal: true,
-    isDisabled: true,
-  },
-  {
-    path: "#",
-    label: "Data",
-    icon: <Graph color="primary" />,
     isExternal: false,
     isDisabled: true,
   },
@@ -91,8 +71,14 @@ const NavLink = styled(Button)<{ isActive: boolean }>`
 
   @media screen and (max-width: ${({ theme }) =>
       theme.view.breakpoints.mobile}) {
-    display: ${({ disabled }) => (disabled ? "none" : "")};
+    /*display: ${({ disabled }) => (disabled ? "none" : "")};*/
   }
+`;
+
+const Logo = styled(BodyText)`
+  padding: ${spacing("sm")} ${spacing()};
+  font-size: ${({ theme }) => theme.font.size.lg};
+  font-weight: ${({ theme }) => theme.font.weight.bold};
 `;
 
 export const Nav = () => {
@@ -101,15 +87,17 @@ export const Nav = () => {
 
   return (
     <NavContainer alignItems="center" justifyContent="space-between">
-      <Flexbox width="33%" alignItems="center" justifyContent="flex-start">
+      <Flexbox width="100%" alignItems="center" justifyContent="flex-start">
         <Flexbox flexCentered className="desktop-logo">
-          <FullLockup logomarkColor="theme" textColor="primary" />
+          {/* <FullLockup logomarkColor="theme" textColor="primary" /> */}
+          <Logomark color="theme" />
+          <Logo>Resynth Trade</Logo>
         </Flexbox>
         <Flexbox flexCentered className="mobile-logo">
           <Logomark color="theme" />
         </Flexbox>
       </Flexbox>
-      <Flexbox width="33%" flexCentered>
+      <Flexbox width="100%" flexCentered>
         {ROUTES.map((route) => (
           <NavLink
             key={route.label}
@@ -130,7 +118,7 @@ export const Nav = () => {
           </NavLink>
         ))}
       </Flexbox>
-      <Flexbox width="33%" alignItems="center" justifyContent="flex-end">
+      <Flexbox width="100%" alignItems="center" justifyContent="flex-end">
         <ThemeToggleButton />
         <NetworkModal />
         <WalletModal />
