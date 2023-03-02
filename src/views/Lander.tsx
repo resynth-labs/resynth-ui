@@ -15,7 +15,7 @@ export const Lander = () => {
           }}
         >
           The Synthetic Assets <br />
-          ecosystem on Solana
+          Ecosystem on Solana
         </h1>
       </div>
       <SkewedCarousel />
