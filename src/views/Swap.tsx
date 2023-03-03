@@ -7,7 +7,7 @@ import { useModals } from "../contexts/ModalsProvider";
 import { bigIntToTokens } from "../utils/numbers";
 import { openTxInExplorer } from "../utils/explore";
 import { notify } from "../utils/notify";
-import { color, spacing } from "../styles/mixins";
+import { color } from "../styles/mixins";
 import { Flexbox, Spacer } from "../components/Layout";
 import { AccentText, BodyText } from "../components/Typography";
 import { Input, Select, SelectOption } from "../components/Fields";

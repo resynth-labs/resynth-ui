@@ -17,6 +17,11 @@ import { Oracle } from "@resynth/resynth-sdk";
 import { assert } from "../utils/errors";
 import { SwapContainer } from "../components/Containers/Swap/SwapContainer";
 import { Disclaimer } from "../components/Disclaimer/Disclaimer";
+import {
+  getMintSyntheticAssetTransaction,
+  sendMintSyntheticTransaction,
+} from "../actions/mintSyntheticAsset";
+import { Transaction } from "@solana/web3.js";
 
 function logoUrl(oracle: string) {
   return `/img/tokens/${oracle}.png`;
@@ -181,7 +186,9 @@ export const Mint = () => {
 
   // Submit swap transaction
   const submitSwap = async () => {
-    if (!wallet.publicKey || !wallet.signTransaction) return;
+    if (!wallet.publicKey || !wallet.signTransaction) {
+      return;
+    }
     setIsSendingTx(true);
     const notificationId = notify({
       content: "Sending transaction...",
@@ -190,17 +197,32 @@ export const Mint = () => {
 
     let txId = "";
     try {
-      // const swapTx = client.makeSwapTransaction(
-      //   inputToken,
-      //   swapType === "mint" ? parseFloat(amountIn) : 0,
-      //   inputToken,
-      //   swapType === "burn" ? parseFloat(amountOut) : 0
-      // );
+      let transaction: Transaction;
+      let lastValidBlockHeight: number;
+      if (swapType === "mint") {
+        ({ transaction, lastValidBlockHeight } =
+          await getMintSyntheticAssetTransaction(
+            client,
+            oracle,
+            +amountCollateral,
+            +amountSynthetic,
+            collateralBalance.balanceAddress,
+            syntheticBalance.balanceAddress
+          ));
+      } else {
+        throw new Error("Burn not implemented");
+      }
+
+      transaction = await wallet.signTransaction(transaction);
+
+      txId = await sendMintSyntheticTransaction(
+        connection,
+        transaction,
+        lastValidBlockHeight
+      );
 
       // txId = await wallet.sendTransaction(swapTx, connection);
       // console.log("Successful swap: ", txId);
-      throw new Error("Swap not implemented");
-      alert("Swap not implemented");
     } catch (err) {
       console.error(err);
     }
