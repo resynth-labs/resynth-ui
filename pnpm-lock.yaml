@@ -13125,7 +13125,7 @@ packages:
     dev: false
 
   file:resynth-sdk.tgz:
-    resolution: {integrity: sha512-4aIVxSoStOTJOH4DOLy99F10kPzf9LZoJiDSIIJE2A7VSCKsMkymNlJOr1pAcCecUvcTKj3AaTrEKE/kt9SaUA==, tarball: file:resynth-sdk.tgz}
+    resolution: {integrity: sha512-VJXW2eRvjcT38DiqZ7TyE2qTwvYxxji0hMuxeaDqEtMlAsQenA9Pz8AJdbUaA0lTlAeWo7obPtHlz147Q605VA==, tarball: file:resynth-sdk.tgz}
     name: '@resynth/resynth-sdk'
     version: 0.0.1
     dependencies:

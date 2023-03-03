@@ -5,7 +5,7 @@ import { color, spacing } from "../../styles/mixins";
 import { Button, ThemeToggleButton } from "../Buttons";
 import { Flexbox } from ".";
 import { NetworkModal, WalletModal } from "../Modals";
-import { SwapArrows, Document, Graph, FullLockup, Logomark } from "../Icons";
+import { SwapArrows, Logomark } from "../Icons";
 import { BodyText } from "../Typography";
 
 const ROUTES: {
@@ -23,11 +23,11 @@ const ROUTES: {
     isDisabled: false,
   },
   {
-    path: "/stake",
-    label: "Stake",
+    path: "/mint",
+    label: "Mint",
     icon: <SwapArrows color="primary" />,
     isExternal: false,
-    isDisabled: true,
+    isDisabled: false,
   },
   {
     path: "/pools",
@@ -106,7 +106,9 @@ export const Nav = () => {
             isActive={route.path === location.pathname}
             disabled={route.isDisabled}
             onClick={() => {
-              if (route.isDisabled) return;
+              if (route.isDisabled) {
+                return;
+              }
 
               if (route.isExternal) {
                 window.open(route.path, "_blank");

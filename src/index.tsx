@@ -13,6 +13,7 @@ import { GlobalStyles } from "./styles/globalStyles";
 import { Nav, Notifications } from "./components/Layout";
 import { Swap } from "./views/Swap";
 import { Lander } from "./views/Lander";
+import { Mint } from "./views/Mint";
 
 const ThemedApp = () => {
   const { themeMode } = useThemeMode();
@@ -26,6 +27,7 @@ const ThemedApp = () => {
           <Routes>
             <Route index path="/" element={<Lander />} />
             <Route path="/swap" element={<Swap />} />
+            <Route path="/mint" element={<Mint />} />
           </Routes>
         </BrowserRouter>
         <Notifications />

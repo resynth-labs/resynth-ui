@@ -86,7 +86,7 @@ const tokens: Record<string, Token> = {
 };
 // =========== Dummy data to get this rendering ===========
 
-export const Swap = () => {
+export const Mint = () => {
   const theme = useTheme();
   const { network } = useNetwork();
   const { connection } = useConnection();
