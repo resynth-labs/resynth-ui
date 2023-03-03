@@ -7,7 +7,7 @@ export const Lander = () => {
   const glowColor = themeMode === "dark" ? "#1E1E21" : "#f2f2f2";
   const [skewed, setSkewed] = useState(true);
 
-  function carouselItemClickedHandler(oracle: string) {
+  function carouselItemClickedHandler(_oracle: string) {
     setSkewed(false);
   }
 

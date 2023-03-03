@@ -2324,6 +2324,21 @@ packages:
       eventemitter3: 4.0.7
     dev: false
 
+  /@pythnetwork/client/2.15.0_@solana+web3.js@1.73.3:
+    resolution: {integrity: sha512-PTFI0ZWqbDiuiiB2Xx76ZU9PItHPIIQzsEqpbs0N9aumIeVXh6A1m/oZTZ7pRcG4jA9wROmA+GaYQU8UHzpjWA==}
+    peerDependencies:
+      '@solana/web3.js': ^1.30.2
+    dependencies:
+      '@coral-xyz/anchor': 0.26.0
+      '@solana/web3.js': 1.73.3
+      buffer: 6.0.3
+    transitivePeerDependencies:
+      - bufferutil
+      - encoding
+      - supports-color
+      - utf-8-validate
+    dev: false
+
   /@react-native-async-storage/async-storage/1.17.11:
     resolution: {integrity: sha512-bzs45n5HNcDq6mxXnSsOHysZWn1SbbebNxldBXCQs8dSvF8Aor9KCdpm+TpnnGweK3R6diqsT8lFhX77VX0NFw==}
     peerDependencies:
@@ -13125,11 +13140,12 @@ packages:
     dev: false
 
   file:resynth-sdk.tgz:
-    resolution: {integrity: sha512-VJXW2eRvjcT38DiqZ7TyE2qTwvYxxji0hMuxeaDqEtMlAsQenA9Pz8AJdbUaA0lTlAeWo7obPtHlz147Q605VA==, tarball: file:resynth-sdk.tgz}
+    resolution: {integrity: sha512-fHADhot7LzbmKkB+e155Fpjc0mGhaoFydrzmJaEGI2CCAPeIJsXQmJDWtqDLB3CSjKYp9R1ir//KpdFvbwsH2A==, tarball: file:resynth-sdk.tgz}
     name: '@resynth/resynth-sdk'
     version: 0.0.1
     dependencies:
       '@coral-xyz/anchor': 0.26.0
+      '@pythnetwork/client': 2.15.0_@solana+web3.js@1.73.3
       '@solana/spl-token': 0.3.7_@solana+web3.js@1.73.3
       '@solana/web3.js': 1.73.3
     transitivePeerDependencies:

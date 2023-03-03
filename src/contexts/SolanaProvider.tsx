@@ -30,10 +30,6 @@ const defaultRpcEndpoints: Record<Network, RpcEndpoint> = {
     url: "https://api.devnet.solana.com",
     tps: 0,
   },
-  localnet: {
-    url: "http://localhost:8899",
-    tps: 0,
-  },
 };
 
 export const SolanaRpcContext = createContext<{

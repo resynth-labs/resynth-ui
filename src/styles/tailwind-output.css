@@ -563,12 +563,12 @@ video {
   pointer-events: none;
 }
 
-.visible {
-  visibility: visible;
+.\!visible {
+  visibility: visible !important;
 }
 
-.invisible {
-  visibility: hidden;
+.visible {
+  visibility: visible;
 }
 
 .absolute {
@@ -606,6 +606,10 @@ video {
 
 .mb-3 {
   margin-bottom: 0.75rem;
+}
+
+.mb-\[20px\] {
+  margin-bottom: 20px;
 }
 
 .mt-\[300px\] {
@@ -750,6 +754,10 @@ video {
 .animate-skew-scroll {
   -webkit-animation: skew-scroll 280s linear infinite;
           animation: skew-scroll 280s linear infinite;
+}
+
+.cursor-pointer {
+  cursor: pointer;
 }
 
 .grid-cols-1 {
