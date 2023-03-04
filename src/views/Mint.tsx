@@ -197,27 +197,22 @@ export const Mint = () => {
 
     let txId = "";
     try {
-      let transaction: Transaction;
-      let lastValidBlockHeight: number;
-      if (swapType === "mint") {
-        ({ transaction, lastValidBlockHeight } =
-          await getMintSyntheticAssetTransaction(
-            client,
-            oracle,
-            +amountCollateral,
-            +amountSynthetic,
-            collateralBalance.balanceAddress,
-            syntheticBalance.balanceAddress
-          ));
-      } else {
-        throw new Error("Burn not implemented");
-      }
+      const { transaction, lastValidBlockHeight } =
+        await getMintSyntheticAssetTransaction(
+          swapType === "mint",
+          client,
+          oracle,
+          +amountCollateral,
+          +amountSynthetic,
+          collateralBalance.balanceAddress,
+          syntheticBalance.balanceAddress
+        );
 
-      transaction = await wallet.signTransaction(transaction);
+      const signedTransaction = await wallet.signTransaction(transaction);
 
       txId = await sendMintSyntheticTransaction(
         connection,
-        transaction,
+        signedTransaction,
         lastValidBlockHeight
       );
 

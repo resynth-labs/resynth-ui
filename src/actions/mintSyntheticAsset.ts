@@ -21,6 +21,7 @@ export interface WithdrawAnalytics {
 }
 
 export const getMintSyntheticAssetTransaction = async (
+  mint: boolean,
   client: ResynthClient,
   oracleLabel: string,
   collateralTokens: number,
@@ -72,16 +73,29 @@ export const getMintSyntheticAssetTransaction = async (
     instructions.push(ix);
   }
 
-  let ix = await client.mintSyntheticAssetInstruction({
-    collateralAmount,
-    mintAmount,
-    syntheticOracle: translateAddress(oracle),
-    owner: walletPubkey,
-    collateralMint: new PublicKey(collateralMint),
-    collateralAccount,
-    syntheticAccount,
-  });
-  instructions.push(ix);
+  if (mint) {
+    let ix = await client.mintSyntheticAssetInstruction({
+      collateralAmount,
+      mintAmount,
+      syntheticOracle: translateAddress(oracle),
+      owner: walletPubkey,
+      collateralMint: new PublicKey(collateralMint),
+      collateralAccount,
+      syntheticAccount,
+    });
+    instructions.push(ix);
+  } else {
+    let ix = await client.burnSyntheticAssetInstruction({
+      collateralAmount,
+      burnAmount: mintAmount,
+      syntheticOracle: translateAddress(oracle),
+      owner: walletPubkey,
+      collateralMint: new PublicKey(collateralMint),
+      collateralAccount,
+      syntheticAccount,
+    });
+    instructions.push(ix);
+  }
 
   const transaction = new Transaction({
     feePayer: walletPubkey,
