@@ -94,10 +94,13 @@ export const Mint = () => {
   const [amountCollateral, setAmountCollateral] = useState("0");
   const [amountSynthetic, setAmountSynthetic] = useState("0");
 
-  const inputLabel =
+  const inputTokenLabel =
     swapType === "mint" ? "Input collateral" : "Input Synthetic";
-  const outputLabel =
+  const outputTokenLabel =
     swapType === "mint" ? "Output Synthetic" : "Output Collateral";
+
+  const inputLabel = "Amount in";
+  const outputLabel = "Amount out";
 
   const inputTokenOptions =
     swapType === "mint" ? collateralOptions : syntheticOptions;
@@ -117,6 +120,26 @@ export const Mint = () => {
 
   const maxAmountIn = Number.MAX_SAFE_INTEGER;
   const maxAmountOut = Number.MAX_SAFE_INTEGER;
+
+  const inputTokenDisabled =
+    swapType === "mint" || isSendingTx || isClientLoading;
+  const outputTokenDisabled =
+    swapType === "burn" || isSendingTx || isClientLoading;
+
+  const inputDisabled = !inputToken || isSendingTx || isClientLoading;
+  const outputDisabled = !outputToken || isSendingTx || isClientLoading;
+
+  const submitLabel = wallet.connected
+    ? isSendingTx
+      ? "Swapping..."
+      : "Swap"
+    : "Connect wallet";
+
+  const submitDisabled =
+    isClientLoading ||
+    isSendingTx ||
+    (wallet.connected &&
+      (!inputToken || !amountIn || !outputToken || !amountOut));
 
   const setInputToken = (token: string) => {
     assert(swapType === "mint", "Can't set collateral token");
@@ -150,9 +173,15 @@ export const Mint = () => {
 
   // Submit swap transaction
   const submitSwap = async () => {
-    if (!wallet.publicKey || !wallet.signTransaction) {
+    if (isClientLoading || isSendingTx) {
       return;
     }
+
+    if (!wallet.connected || !wallet.publicKey || !wallet.signTransaction) {
+      setIsWalletModalOpen(true);
+      return;
+    }
+
     setIsSendingTx(true);
     const notificationId = notify({
       content: "Sending transaction...",
@@ -221,19 +250,19 @@ export const Mint = () => {
         >
           <Select
             width="40%"
-            label={inputLabel}
+            label={inputTokenLabel}
             value={inputValue}
             options={inputTokenOptions}
             noOptionsMessage="No input tokens for this market"
             onChange={(token: SelectOption) => setInputToken(token.label)}
             needsValue={wallet.connected && !inputToken}
             error={wasTxError}
-            disabled={swapType === "mint" || isSendingTx || isClientLoading}
+            disabled={inputTokenDisabled}
           />
           <Input
             width="57.5%"
             type="number"
-            label="Amount in"
+            label={inputLabel}
             value={amountIn}
             max={maxAmountIn}
             maxButton={{
@@ -245,7 +274,7 @@ export const Mint = () => {
             }}
             needsValue={Boolean(inputToken && !amountIn)}
             error={wasTxError}
-            disabled={!inputToken || isSendingTx || isClientLoading}
+            disabled={inputDisabled}
           />
         </Flexbox>
 
@@ -271,19 +300,19 @@ export const Mint = () => {
         >
           <Select
             width="40%"
-            label={outputLabel}
+            label={outputTokenLabel}
             value={outputValue}
             options={outputTokenOptions}
             noOptionsMessage="No output tokens for this market"
             onChange={(token: SelectOption) => setOutputToken(token.label)}
             needsValue={wallet.connected && !inputToken}
             error={wasTxError}
-            disabled={swapType === "burn" || isSendingTx || isClientLoading}
+            disabled={outputTokenDisabled}
           />
           <Input
             width="57.5%"
             type="number"
-            label="Amount out"
+            label={outputLabel}
             value={amountOut}
             max={maxAmountOut}
             maxButton={{
@@ -293,7 +322,7 @@ export const Mint = () => {
             onChange={(amount: string) => setAmountOut(amount)}
             needsValue={Boolean(outputToken && !amountOut)}
             error={wasTxError}
-            disabled={!outputToken || isSendingTx || isClientLoading}
+            disabled={outputDisabled}
           />
         </Flexbox>
 
@@ -301,29 +330,10 @@ export const Mint = () => {
         <Spacer size="xl" />
         <PrimaryButton
           fullWidth
-          label={
-            wallet.connected
-              ? isSendingTx
-                ? "Swapping..."
-                : "Swap"
-              : "Connect wallet"
-          }
-          onClick={() => {
-            if (isClientLoading || isSendingTx) return;
-
-            if (wallet.connected) {
-              submitSwap();
-            } else {
-              setIsWalletModalOpen(true);
-            }
-          }}
+          label={submitLabel}
+          onClick={submitSwap}
           isLoading={isClientLoading}
-          disabled={
-            isClientLoading ||
-            isSendingTx ||
-            (wallet.connected &&
-              (!inputToken || !amountIn || !outputToken || !amountOut))
-          }
+          disabled={submitDisabled}
         />
       </SwapContainer>
     </>
