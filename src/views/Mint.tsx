@@ -1,17 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
-import styled, { useTheme } from "styled-components";
+import { useMemo, useState } from "react";
+import { useTheme } from "styled-components";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useNetwork } from "../contexts/NetworkProvider";
 import { useResynth } from "../contexts/ResynthProvider";
 import { useModals } from "../contexts/ModalsProvider";
 import { openTxInExplorer } from "../utils/explore";
 import { notify } from "../utils/notify";
-import { color, spacing } from "../styles/mixins";
 import { Flexbox, Spacer } from "../components/Layout";
 import { Input, Select, SelectOption } from "../components/Fields";
 import { Button, PrimaryButton } from "../components/Buttons";
 import { ExternalLink, SwapArrows, UnknownToken } from "../components/Icons";
-import { useSyntheticAsset } from "../hooks/useSyntheticAsset";
 import { useCollateralBalance, useSynthBalance } from "../hooks/useBalance";
 import { Oracle } from "@resynth/resynth-sdk";
 import { assert } from "../utils/errors";
@@ -21,7 +19,6 @@ import {
   getMintSyntheticAssetTransaction,
   sendMintSyntheticTransaction,
 } from "../actions/mintSyntheticAsset";
-import { Transaction } from "@solana/web3.js";
 
 function logoUrl(oracle: string) {
   return `/img/tokens/${oracle}.png`;
@@ -39,7 +36,6 @@ export const Mint = () => {
   const { client, isClientLoading, oracle } = useResynth();
   const collateralBalance = useCollateralBalance();
   const syntheticBalance = useSynthBalance();
-  const syntheticAsset = useSyntheticAsset();
   const [isSendingTx, setIsSendingTx] = useState(false);
   const [wasTxError, setWasTxError] = useState(false);
   const oracles = client.config.oracles;
@@ -93,20 +89,6 @@ export const Mint = () => {
   assert(collateralValue);
   assert(syntheticValue);
 
-  // Current market based on input and output tokens
-  // const market =
-  //   inputToken &&
-  //   outputToken &&
-  //   Object.values(markets).filter((market) => {
-  //     if (market.configuration) {
-  //       const marketPair = `${market.configuration?.baseSymbol}/${market.configuration?.quoteSymbol}`;
-  //       return (
-  //         marketPair === `${inputToken}/${inputToken}` ||
-  //         marketPair === `${inputToken}/${inputToken}`
-  //       );
-  //     }
-  //   })[0];
-
   // Swap type and amounts in/out
   const [swapType, setSwapType] = useState<"mint" | "burn">("mint");
   const [amountCollateral, setAmountCollateral] = useState("0");
@@ -133,25 +115,7 @@ export const Mint = () => {
   const amountIn = swapType === "mint" ? amountCollateral : amountSynthetic;
   const amountOut = swapType === "mint" ? amountSynthetic : amountCollateral;
 
-  // Maximum amounts in/out
-  // const maxAmountIn =
-  //   swapType === "mint" ? collateralBalance.balance : syntheticBalance.balance;
   const maxAmountIn = Number.MAX_SAFE_INTEGER;
-  /*
-  const maxAmountOut =
-    market && inputToken && outputToken
-      ? Number(
-          market
-            .getAmountOut(
-              inputToken,
-              Number(amountIn),
-              inputToken
-            )
-            .toFixed(outputToken.configuration.decimals)
-        )
-      : 0;
-  */
-  // FIXME!
   const maxAmountOut = Number.MAX_SAFE_INTEGER;
 
   const setInputToken = (token: string) => {
@@ -215,9 +179,6 @@ export const Mint = () => {
         signedTransaction,
         lastValidBlockHeight
       );
-
-      // txId = await wallet.sendTransaction(swapTx, connection);
-      // console.log("Successful swap: ", txId);
     } catch (err) {
       console.error(err);
     }
@@ -247,43 +208,6 @@ export const Mint = () => {
       setWasTxError(true);
     }
   };
-
-  // // Update amounts in/out on change to their compliment
-  // useEffect(() => {
-  //   // Amount out
-  //   if (swapType === "mint" && inputToken && amountIn) {
-  //     setAmountOut("0");
-  //     /*
-  //     setAmountOut(
-  //       market
-  //         .getAmountOut(
-  //           inputToken,
-  //           Number(amountIn),
-  //           inputToken
-  //         )
-  //         .toFixed(outputToken.configuration.decimals)
-  //     );
-  //     */
-  //   }
-
-  //   // Amount in
-  //   if (swapType === "burn" && outputToken && amountOut) {
-  //     setAmountIn("0");
-  //     /*
-  //     setAmountIn(
-  //       market
-  //         .getAmountIn(
-  //           inputToken,
-  //           inputToken,
-  //           Number(amountOut)
-  //         )
-  //         .toFixed(inputToken.configuration.decimals)
-  //     );
-  //     */
-  //   }
-
-  //   setWasTxError(false);
-  // }, [amountIn, amountOut]);
 
   return (
     <>
