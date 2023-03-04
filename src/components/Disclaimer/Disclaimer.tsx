@@ -3,7 +3,7 @@ import { SwapContainer } from "../Containers/Swap/SwapContainer";
 
 export const Disclaimer = () => {
   const [visible, setVisible] = useState<boolean>(
-    !window.location.href.includes("locaslhost")
+    !window.location.href.includes("localhost")
   );
   if (!visible) {
     return <></>;
