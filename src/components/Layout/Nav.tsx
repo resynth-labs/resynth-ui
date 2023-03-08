@@ -1,11 +1,12 @@
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import styled from "styled-components";
 
 import { color, spacing } from "../../styles/mixins";
 import { Button, ThemeToggleButton } from "../Buttons";
 import { Flexbox } from ".";
 import { NetworkModal, WalletModal } from "../Modals";
-import { SwapArrows, Document, Graph, FullLockup, Logomark } from "../Icons";
+import { SwapArrows, Logomark } from "../Icons";
+import { BodyText } from "../Typography";
 
 const ROUTES: {
   path: string;
@@ -15,44 +16,23 @@ const ROUTES: {
   isDisabled: boolean;
 }[] = [
   {
-    path: "/",
+    path: "/swap",
     label: "Swap",
     icon: <SwapArrows color="primary" />,
     isExternal: false,
     isDisabled: false,
   },
   {
-    path: "/",
-    label: "Pools",
-    icon: <SwapArrows color="primary" />,
-    isExternal: false,
-    isDisabled: true,
-  },
-  {
-    path: "/",
+    path: "/mint",
     label: "Mint",
     icon: <SwapArrows color="primary" />,
     isExternal: false,
-    isDisabled: true,
+    isDisabled: false,
   },
   {
-    path: "/",
-    label: "Burn",
+    path: "/pools",
+    label: "Pools",
     icon: <SwapArrows color="primary" />,
-    isExternal: false,
-    isDisabled: true,
-  },
-  {
-    path: "#",
-    label: "Docs",
-    icon: <Document color="primary" />,
-    isExternal: true,
-    isDisabled: true,
-  },
-  {
-    path: "#",
-    label: "Data",
-    icon: <Graph color="primary" />,
     isExternal: false,
     isDisabled: true,
   },
@@ -91,8 +71,14 @@ const NavLink = styled(Button)<{ isActive: boolean }>`
 
   @media screen and (max-width: ${({ theme }) =>
       theme.view.breakpoints.mobile}) {
-    display: ${({ disabled }) => (disabled ? "none" : "")};
+    /*display: ${({ disabled }) => (disabled ? "none" : "")};*/
   }
+`;
+
+const Logo = styled(BodyText)`
+  padding: ${spacing("sm")} ${spacing()};
+  font-size: ${({ theme }) => theme.font.size.lg};
+  font-weight: ${({ theme }) => theme.font.weight.bold};
 `;
 
 export const Nav = () => {
@@ -101,22 +87,28 @@ export const Nav = () => {
 
   return (
     <NavContainer alignItems="center" justifyContent="space-between">
-      <Flexbox width="33%" alignItems="center" justifyContent="flex-start">
-        <Flexbox flexCentered className="desktop-logo">
-          <FullLockup logomarkColor="theme" textColor="primary" />
-        </Flexbox>
-        <Flexbox flexCentered className="mobile-logo">
-          <Logomark color="theme" />
-        </Flexbox>
+      <Flexbox width="100%" alignItems="center" justifyContent="flex-start">
+        <Link to={"/"}>
+          <Flexbox flexCentered className="desktop-logo">
+            {/* <FullLockup logomarkColor="theme" textColor="primary" /> */}
+            <Logomark color="theme" />
+            <Logo>Resynth Trade</Logo>
+          </Flexbox>
+          <Flexbox flexCentered className="mobile-logo">
+            <Logomark color="theme" />
+          </Flexbox>
+        </Link>
       </Flexbox>
-      <Flexbox width="33%" flexCentered>
+      <Flexbox width="100%" flexCentered>
         {ROUTES.map((route) => (
           <NavLink
             key={route.label}
             isActive={route.path === location.pathname}
             disabled={route.isDisabled}
             onClick={() => {
-              if (route.isDisabled) return;
+              if (route.isDisabled) {
+                return;
+              }
 
               if (route.isExternal) {
                 window.open(route.path, "_blank");
@@ -130,7 +122,7 @@ export const Nav = () => {
           </NavLink>
         ))}
       </Flexbox>
-      <Flexbox width="33%" alignItems="center" justifyContent="flex-end">
+      <Flexbox width="100%" alignItems="center" justifyContent="flex-end">
         <ThemeToggleButton />
         <NetworkModal />
         <WalletModal />

@@ -16,7 +16,6 @@ export const GlobalStyles = createGlobalStyle`
       theme.font.family}, Open-Sans, Helvetica, Sans-Serif;
     font-size: ${({ theme }) => theme.font.size.base};
     font-weight: ${({ theme }) => theme.font.weight.base};
-    overflow: hidden;
   }
   h1, h2, h3, h4, p, span {
     margin: unset;

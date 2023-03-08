@@ -2,12 +2,8 @@ import { createContext, useContext } from "react";
 
 import { useLocalStorage } from "../hooks/useLocalStorage";
 
-export type Network = "mainnet" | "devnet" | "localnet";
-export const networkOptions: Network[] = [
-  "mainnet",
-  "devnet",
-  "localnet",
-] as Network[];
+export type Network = "mainnet" | "devnet";
+export const networkOptions: Network[] = ["mainnet", "devnet"] as Network[];
 
 const NetworkContext = createContext<{
   network: Network;

@@ -1,30 +1,21 @@
 import { useEffect, useState } from "react";
 import styled, { useTheme } from "styled-components";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-// import { Token } from "@resynth/resynth-sdk";
-
 import { useNetwork } from "../contexts/NetworkProvider";
 import { useResynth } from "../contexts/ResynthProvider";
 import { useModals } from "../contexts/ModalsProvider";
 import { bigIntToTokens } from "../utils/numbers";
 import { openTxInExplorer } from "../utils/explore";
 import { notify } from "../utils/notify";
-import { color, spacing } from "../styles/mixins";
+import { color } from "../styles/mixins";
 import { Flexbox, Spacer } from "../components/Layout";
 import { AccentText, BodyText } from "../components/Typography";
 import { Input, Select, SelectOption } from "../components/Fields";
 import { Button, PrimaryButton } from "../components/Buttons";
 import { ExternalLink, SwapArrows, UnknownToken } from "../components/Icons";
 import { PublicKey } from "@solana/web3.js";
-
-const SwapContainer = styled(Flexbox)`
-  max-width: ${({ theme }) => theme.view.elements.maxWidth};
-  margin: ${spacing()} auto;
-  padding: ${spacing("lg")};
-  background: ${color("base")};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
-  box-shadow: ${({ theme }) => theme.shadow.base};
-`;
+import { SwapContainer } from "../components/Containers/Swap/SwapContainer";
+import { Disclaimer } from "../components/Disclaimer/Disclaimer";
 
 const SlippageButton = styled(Button)<{ isActive: boolean }>`
   width: 75px;
@@ -52,7 +43,7 @@ interface Token {
   configuration: {
     mint: PublicKey;
     symbol: string;
-    logoUrl: string;
+    logoUrl?: string;
     decimals: number;
   };
 }
@@ -79,7 +70,7 @@ const tokens: Record<string, Token> = {
     balance: BigInt(3.5 * 10 ** 6),
     configuration: {
       mint: PublicKey.default,
-      symbol: "nAPPL",
+      symbol: "nAAPL",
       logoUrl:
         "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjxzdmcgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB3aWR0aD0iODQyLjMyMDA3IiBoZWlnaHQ9IjEwMDAuMDAwMSI+CiAgPHBhdGggZmlsbD0iI2IzYjNiMyIgZD0iTTgyNC42NjYzNiA3NzkuMzAzNjNjLTE1LjEyMjk5IDM0LjkzNzI0LTMzLjAyMzY4IDY3LjA5Njc0LTUzLjc2MzggOTYuNjYzNzQtMjguMjcwNzYgNDAuMzA3NC01MS40MTgyIDY4LjIwNzgtNjkuMjU3MTcgODMuNzAxMi0yNy42NTM0NyAyNS40MzEzLTU3LjI4MjIgMzguNDU1Ni04OS4wMDk2NCAzOS4xOTYzLTIyLjc3NzA4IDAtNTAuMjQ1MzktNi40ODEzLTgyLjIxOTczLTE5LjYyOS0zMi4wNzkyNi0xMy4wODYxLTYxLjU1OTg1LTE5LjU2NzMtODguNTE1ODMtMTkuNTY3My0yOC4yNzA3NSAwLTU4LjU5MDgzIDYuNDgxMi05MS4wMjE5MyAxOS41NjczLTMyLjQ4MDUzIDEzLjE0NzctNTguNjQ2MzkgMTkuOTk5NC03OC42NTE5NiAyMC42Nzg0LTMwLjQyNTAxIDEuMjk2MjMtNjAuNzUxMjMtMTIuMDk4NS05MS4wMjE5My00MC4yNDU3LTE5LjMyMDM5LTE2Ljg1MTQtNDMuNDg2MzItNDUuNzM5NC03Mi40MzYwNy04Ni42NjQxLTMxLjA2MDc3OC00My43MDI0LTU2LjU5NzA0MS05NC4zNzk4My03Ni42MDI2MDktMTUyLjE1NTg2QzEwLjc0MDQxNiA2NTguNDQzMDkgMCA1OTguMDEyODMgMCA1MzkuNTA4NDVjMC02Ny4wMTY0OCAxNC40ODEwNDQtMTI0LjgxNzIgNDMuNDg2MzM2LTE3My4yNTQwMUM2Ni4yODE5NCAzMjcuMzQ4MjMgOTYuNjA4MTggMjk2LjY1NzggMTM0LjU2MzggMjc0LjEyNzZjMzcuOTU1NjYtMjIuNTMwMTYgNzguOTY2NzYtMzQuMDExMjkgMTIzLjEzMjEtMzQuNzQ1ODUgMjQuMTY1OTEgMCA1NS44NTYzMyA3LjQ3NTA4IDk1LjIzNzg0IDIyLjE2NiAzOS4yNzA0MiAxNC43NDAyOSA2NC40ODU3MSAyMi4yMTUzOCA3NS41NDA5MSAyMi4yMTUzOCA4LjI2NTE4IDAgMzYuMjc2NjgtOC43NDA1IDgzLjc2MjktMjYuMTY1ODcgNDQuOTA2MDctMTYuMTYwMDEgODIuODA2MTQtMjIuODUxMTggMTEzLjg1NDU4LTIwLjIxNTQ2IDg0LjEzMzI2IDYuNzg5OTIgMTQ3LjM0MTIyIDM5Ljk1NTU5IDE4OS4zNzY5OSA5OS43MDY4Ni03NS4yNDQ2MyA0NS41OTEyMi0xMTIuNDY1NzMgMTA5LjQ0NzMtMTExLjcyNTAyIDE5MS4zNjQ1Ni42Nzg5OSA2My44MDY3IDIzLjgyNjQzIDExNi45MDM4NCA2OS4zMTg4OCAxNTkuMDYzMDkgMjAuNjE2NjQgMTkuNTY3MjcgNDMuNjQwNjYgMzQuNjkwMjcgNjkuMjU3MSA0NS40MzA3LTUuNTU1MzEgMTYuMTEwNjItMTEuNDE5MzMgMzEuNTQyMjUtMTcuNjUzNzIgNDYuMzU2NjJ6TTYzMS43MDkyNiAyMC4wMDU3YzAgNTAuMDExNDEtMTguMjcxMDggOTYuNzA2OTMtNTQuNjg5NyAxMzkuOTI3ODItNDMuOTQ5MzIgNTEuMzgxMTgtOTcuMTA4MTcgODEuMDcxNjItMTU0Ljc1NDU5IDc2LjM4NjU5LS43MzQ1NC01Ljk5OTgzLTEuMTYwNDUtMTIuMzE0NDQtMS4xNjA0NS0xOC45NTAwMyAwLTQ4LjAxMDkxIDIwLjkwMDYtOTkuMzkyMDcgNTguMDE2NzgtMTQxLjQwMzE0IDE4LjUzMDI3LTIxLjI3MDk0IDQyLjA5NzQ2LTM4Ljk1NzQ0IDcwLjY3Njg1LTUzLjA2NjNDNTc4LjMxNTggOS4wMDIyOSA2MDUuMjkwMyAxLjMxNjIxIDYzMC42NTk4OCAwYy43NDA3NiA2LjY4NTc1IDEuMDQ5MzggMTMuMzcxOTEgMS4wNDkzOCAyMC4wMDUwNXoiLz4KPC9zdmc+",
       decimals: 6,
@@ -168,7 +159,7 @@ export const Swap = () => {
 
   // Swap type and amounts in/out
   const [swapType, setSwapType] = useState<"exactIn" | "exactOut">("exactIn");
-  const [slippage, setSlippage] = useState<number | undefined>();
+  const [slippage, setSlippage] = useState<number | undefined>(0.005);
   const [amountIn, setAmountIn] = useState("");
   const [amountOut, setAmountOut] = useState("");
 
@@ -296,158 +287,171 @@ export const Swap = () => {
   }, [market, amountIn, amountOut]);
 
   return (
-    <SwapContainer width="95%" alignItems="center" flexColumn>
-      {/** INPUT DATA **/}
-      <Flexbox width="100%" justifyContent="space-between" alignItems="center">
-        <Select
-          width="40%"
-          label="Input token"
-          value={
-            tokenOptions.filter(
-              (option: any) =>
-                option.key === inputToken?.configuration.mint.toBase58()
-            )[0]
-          }
-          options={inputTokenOptions}
-          noOptionsMessage="No input tokens for this market"
-          onChange={(token: SelectOption) => setInputToken(tokens[token.label])}
-          needsValue={wallet.connected && !inputToken}
-          error={wasTxError}
-          disabled={isSendingTx || isClientLoading}
-        />
-        <Input
-          width="57.5%"
-          type="number"
-          label="Amount in"
-          value={amountIn}
-          max={maxAmountIn}
-          maxButton={{
-            isActive: !!amountIn && Number(amountIn) === maxAmountIn,
-            onClick: () => setAmountIn(maxAmountIn.toString()),
-          }}
-          onChange={(amount: string) => {
-            setAmountIn(amount);
-            setSwapType("exactIn");
-          }}
-          needsValue={inputToken && !amountIn}
-          error={wasTxError}
-          disabled={!inputToken || isSendingTx || isClientLoading}
-        />
-      </Flexbox>
-
-      {/** SWITCH DATA **/}
-      <Flexbox marginY="base">
-        <Button
-          onClick={() => {
-            setInputToken(outputToken);
-            setAmountIn(amountOut);
-            setOutputToken(inputToken);
-            setAmountOut(amountIn);
-          }}
-          disabled={isSendingTx || !inputToken || !outputToken}
-        >
-          <SwapArrows size={theme.font.size.lg} />
-        </Button>
-      </Flexbox>
-
-      {/** OUTPUT DATA **/}
-      <Flexbox width="100%" justifyContent="space-between" alignItems="center">
-        <Select
-          width="40%"
-          label="Output token"
-          value={
-            tokenOptions.filter(
-              (option: any) =>
-                option.key === outputToken?.configuration.mint.toBase58()
-            )[0]
-          }
-          options={outputTokenOptions}
-          noOptionsMessage="No output tokens for this market"
-          onChange={(token: SelectOption) =>
-            setOutputToken(tokens[token.label])
-          }
-          needsValue={wallet.connected && !inputToken}
-          error={wasTxError}
-          disabled={isSendingTx || isClientLoading}
-        />
-        <Input
-          width="57.5%"
-          type="number"
-          label="Amount out"
-          value={amountOut}
-          max={maxAmountOut}
-          maxButton={{
-            isActive: !!amountOut && Number(amountOut) === maxAmountOut,
-            onClick: () => setAmountOut(maxAmountOut.toString()),
-          }}
-          onChange={(amount: string) => {
-            setAmountOut(amount);
-            setSwapType("exactOut");
-          }}
-          needsValue={outputToken && !amountOut}
-          error={wasTxError}
-          disabled={!outputToken || isSendingTx || isClientLoading}
-        />
-      </Flexbox>
-
-      {/** SLIPPAGE **/}
-      <Flexbox width="95%" flexColumn marginY="xl">
-        <AccentText>Slippage</AccentText>
-        <Spacer />
+    <>
+      <Disclaimer />
+      <SwapContainer width="95%" alignItems="center" flexColumn>
+        {/** INPUT DATA **/}
         <Flexbox
           width="100%"
-          alignItems="center"
           justifyContent="space-between"
+          alignItems="center"
         >
-          {[0.001, 0.005, 0.0075, 0.01].map((slipPercentage) => (
+          <Select
+            width="40%"
+            label="Input token"
+            value={
+              tokenOptions.filter(
+                (option: any) =>
+                  option.key === inputToken?.configuration.mint.toBase58()
+              )[0]
+            }
+            options={inputTokenOptions}
+            noOptionsMessage="No input tokens for this market"
+            onChange={(token: SelectOption) =>
+              setInputToken(tokens[token.label])
+            }
+            needsValue={wallet.connected && !inputToken}
+            error={wasTxError}
+            disabled={isSendingTx || isClientLoading}
+          />
+          <Input
+            width="57.5%"
+            type="number"
+            label="Amount in"
+            value={amountIn}
+            max={maxAmountIn}
+            maxButton={{
+              isActive: !!amountIn && Number(amountIn) === maxAmountIn,
+              onClick: () => setAmountIn(maxAmountIn.toString()),
+            }}
+            onChange={(amount: string) => {
+              setAmountIn(amount);
+              setSwapType("exactIn");
+            }}
+            needsValue={inputToken && !amountIn}
+            error={wasTxError}
+            disabled={!inputToken || isSendingTx || isClientLoading}
+          />
+        </Flexbox>
+
+        {/** SWITCH DATA **/}
+        <Flexbox marginY="base">
+          <Button
+            onClick={() => {
+              setInputToken(outputToken);
+              setAmountIn(amountOut);
+              setOutputToken(inputToken);
+              setAmountOut(amountIn);
+            }}
+            disabled={isSendingTx || !inputToken || !outputToken}
+          >
+            <SwapArrows size={theme.font.size.lg} />
+          </Button>
+        </Flexbox>
+
+        {/** OUTPUT DATA **/}
+        <Flexbox
+          width="100%"
+          justifyContent="space-between"
+          alignItems="center"
+        >
+          <Select
+            width="40%"
+            label="Output token"
+            value={
+              tokenOptions.filter(
+                (option: any) =>
+                  option.key === outputToken?.configuration.mint.toBase58()
+              )[0]
+            }
+            options={outputTokenOptions}
+            noOptionsMessage="No output tokens for this market"
+            onChange={(token: SelectOption) =>
+              setOutputToken(tokens[token.label])
+            }
+            needsValue={wallet.connected && !inputToken}
+            error={wasTxError}
+            disabled={isSendingTx || isClientLoading}
+          />
+          <Input
+            width="57.5%"
+            type="number"
+            label="Amount out"
+            value={amountOut}
+            max={maxAmountOut}
+            maxButton={{
+              isActive: !!amountOut && Number(amountOut) === maxAmountOut,
+              onClick: () => setAmountOut(maxAmountOut.toString()),
+            }}
+            onChange={(amount: string) => {
+              setAmountOut(amount);
+              setSwapType("exactOut");
+            }}
+            needsValue={outputToken && !amountOut}
+            error={wasTxError}
+            disabled={!outputToken || isSendingTx || isClientLoading}
+          />
+        </Flexbox>
+
+        {/** SLIPPAGE **/}
+        <Flexbox width="95%" flexColumn marginY="xl">
+          <AccentText>Slippage</AccentText>
+          <Spacer />
+          <Flexbox
+            width="100%"
+            alignItems="center"
+            justifyContent="space-between"
+          >
+            {[0.001, 0.005, 0.0075, 0.01].map((slipPercentage) => (
+              <SlippageButton
+                onClick={() => setSlippage(slipPercentage)}
+                isActive={slippage === slipPercentage}
+              >
+                <BodyText size="xs" weight="bold">
+                  {slipPercentage * 100}%
+                </BodyText>
+              </SlippageButton>
+            ))}
             <SlippageButton
-              onClick={() => setSlippage(slipPercentage)}
-              isActive={slippage === slipPercentage}
+              onClick={() => setSlippage(undefined)}
+              isActive={slippage === undefined}
             >
-              <BodyText size="xs" weight="bold">
-                {slipPercentage * 100}%
+              <BodyText size="lg" weight="bold">
+                ∞
               </BodyText>
             </SlippageButton>
-          ))}
-          <SlippageButton
-            onClick={() => setSlippage(undefined)}
-            isActive={slippage === undefined}
-          >
-            <BodyText size="lg" weight="bold">
-              ∞
-            </BodyText>
-          </SlippageButton>
+          </Flexbox>
         </Flexbox>
-      </Flexbox>
 
-      {/** SWAP BUTTON **/}
-      <Spacer size="xl" />
-      <PrimaryButton
-        fullWidth
-        label={
-          wallet.connected
-            ? isSendingTx
-              ? "Swapping..."
-              : "Swap"
-            : "Connect wallet"
-        }
-        onClick={() => {
-          if (isClientLoading || isSendingTx) return;
-
-          if (wallet.connected) {
-            submitSwap();
-          } else {
-            setIsWalletModalOpen(true);
+        {/** SWAP BUTTON **/}
+        <Spacer size="xl" />
+        <PrimaryButton
+          fullWidth
+          label={
+            wallet.connected
+              ? isSendingTx
+                ? "Swapping..."
+                : "Swap"
+              : "Connect wallet"
           }
-        }}
-        isLoading={isClientLoading}
-        disabled={
-          isClientLoading ||
-          isSendingTx ||
-          (wallet.connected &&
-            (!inputToken || !amountIn || !outputToken || !amountOut))
-        }
-      />
-    </SwapContainer>
+          onClick={() => {
+            if (isClientLoading || isSendingTx) return;
+
+            if (wallet.connected) {
+              submitSwap();
+            } else {
+              setIsWalletModalOpen(true);
+            }
+          }}
+          isLoading={isClientLoading}
+          disabled={
+            isClientLoading ||
+            isSendingTx ||
+            (wallet.connected &&
+              (!inputToken || !amountIn || !outputToken || !amountOut))
+          }
+        />
+      </SwapContainer>
+    </>
   );
 };
