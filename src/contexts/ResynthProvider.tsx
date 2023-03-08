@@ -157,10 +157,9 @@ export const ResynthProvider = ({
   useEffect(() => {
     try {
       setIsClientLoading(true);
-      const client = new ResynthClient(network, connection, wallet as any);
-      const tokenSwap = new TokenSwapClient(
-        new Context(network, connection, wallet as any)
-      );
+      const context = new Context(network, connection, wallet as any);
+      const client = new ResynthClient(context);
+      const tokenSwap = new TokenSwapClient(context);
       setClient({ client, tokenSwap });
     } catch (err: unknown) {
       console.error(err);

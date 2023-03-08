@@ -50,13 +50,7 @@ export const getDepositSwapPoolTransaction = async (
 ): Promise<{ transaction: Transaction; lastValidBlockHeight: number }> => {
   console.log("Depositing.");
 
-  const tokenSwap = new TokenSwapClient(
-    new Context(
-      resynthClient.cluster,
-      resynthClient.connection,
-      resynthClient.wallet
-    )
-  );
+  const tokenSwap = new TokenSwapClient(resynthClient.context);
 
   const {
     connection,
@@ -208,13 +202,7 @@ export const getInitializeSwapPoolTransaction = async (
 ): Promise<{ transaction: Transaction; lastValidBlockHeight: number }> => {
   console.log("Depositing.");
 
-  const tokenSwap = new TokenSwapClient(
-    new Context(
-      resynthClient.cluster,
-      resynthClient.connection,
-      resynthClient.wallet
-    )
-  );
+  const tokenSwap = new TokenSwapClient(resynthClient.context);
 
   const {
     connection,
