@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   AccountLayout,
   ASSOCIATED_TOKEN_PROGRAM_ID,
+  getMint,
   NATIVE_MINT,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
@@ -15,6 +16,7 @@ import { syntheticAssetPDA, SYNTH_DECIMALS } from "@resynth/resynth-sdk";
 export interface UserBalance {
   balance: number;
   balanceAddress: PublicKey;
+  decimals: number;
   isLoadingBalance: boolean;
   isError: boolean;
   getBalance: () => Promise<void>;
@@ -23,6 +25,7 @@ export interface UserBalance {
 const loadingBalance: UserBalance = {
   balance: 0,
   balanceAddress: PublicKey.default,
+  decimals: 0,
   isLoadingBalance: true,
   isError: false,
   getBalance: async () => {},
@@ -31,6 +34,7 @@ const loadingBalance: UserBalance = {
 const errorBalance: UserBalance = {
   balance: 0,
   balanceAddress: PublicKey.default,
+  decimals: 0,
   isLoadingBalance: false,
   isError: true,
   getBalance: async () => {},
@@ -39,8 +43,7 @@ const errorBalance: UserBalance = {
 export const useCollateralBalance = () => {
   const { client } = useResynth();
   const mint = client.config.collateralMint;
-  const decimals = client.config.collateralDecimals;
-  return useBalance(mint, decimals);
+  return useBalance(mint);
 };
 
 export const useSynthBalance = () => {
@@ -49,11 +52,10 @@ export const useSynthBalance = () => {
     client.programId,
     translateAddress(oracleConfiguration.oracle)
   );
-  const decimals = SYNTH_DECIMALS;
-  return useBalance(syntheticMint, decimals);
+  return useBalance(syntheticMint);
 };
 
-export const useBalance = (mint: Address, decimals: number) => {
+export const useBalance = (mint: Address) => {
   const { publicKey } = useWallet();
   const { client } = useResynth();
   const connection = client.connection;
@@ -66,7 +68,6 @@ export const useBalance = (mint: Address, decimals: number) => {
         connection,
         publicKey,
         translateAddress(mint),
-        decimals,
         () => handlerBalance(abortSignal)
       );
 
@@ -74,7 +75,7 @@ export const useBalance = (mint: Address, decimals: number) => {
         setBalance(balance);
       }
     },
-    [publicKey, connection, mint, decimals]
+    [publicKey, connection, mint]
   );
 
   useEffect(() => {
@@ -90,7 +91,6 @@ export async function getBalance(
   connection: Connection,
   wallet: PublicKey | null,
   mint: PublicKey,
-  decimals: number,
   getBalance: () => Promise<void>
 ): Promise<UserBalance> {
   try {
@@ -100,21 +100,9 @@ export async function getBalance(
 
     let balance: UserBalance;
     if (mint.equals(NATIVE_MINT)) {
-      balance = await getNativeBalance(
-        wallet,
-        connection,
-        mint,
-        decimals,
-        getBalance
-      );
+      balance = await getNativeBalance(wallet, connection, mint, getBalance);
     } else {
-      balance = await getTokenBalance(
-        wallet,
-        connection,
-        mint,
-        decimals,
-        getBalance
-      );
+      balance = await getTokenBalance(wallet, connection, mint, getBalance);
     }
 
     return balance;
@@ -128,7 +116,6 @@ async function getNativeBalance(
   publicKey: PublicKey,
   connection: Connection,
   mint: PublicKey,
-  decimals: number,
   getBalance: () => Promise<void>
 ): Promise<UserBalance> {
   if (!publicKey) {
@@ -143,9 +130,12 @@ async function getNativeBalance(
     ASSOCIATED_TOKEN_PROGRAM_ID
   );
 
+  const decimals = 9;
+
   return {
     balance: (walletState?.lamports ?? 0) / 10 ** decimals,
     balanceAddress,
+    decimals,
     isLoadingBalance: false,
     isError: false,
     getBalance,
@@ -156,7 +146,6 @@ async function getTokenBalance(
   publicKey: PublicKey,
   connection: Connection,
   mint: PublicKey,
-  decimals: number,
   getBalance: () => Promise<void>
 ): Promise<UserBalance> {
   if (!publicKey) {
@@ -164,9 +153,12 @@ async function getTokenBalance(
   }
 
   //get token balance
-  const infos = await connection.getTokenAccountsByOwner(publicKey, {
-    mint: mint,
-  });
+  const [infos, { decimals }] = await Promise.all([
+    connection.getTokenAccountsByOwner(publicKey, {
+      mint: mint,
+    }),
+    getMint(connection, mint),
+  ]);
 
   let highestBalance = BigInt(0);
   let highestAddress: PublicKey | undefined;
@@ -189,6 +181,7 @@ async function getTokenBalance(
   return {
     balance: Number(highestBalance) / 10 ** decimals,
     balanceAddress: highestAddress,
+    decimals,
     isLoadingBalance: false,
     isError: false,
     getBalance,

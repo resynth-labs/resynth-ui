@@ -13140,7 +13140,7 @@ packages:
     dev: false
 
   file:resynth-sdk.tgz:
-    resolution: {integrity: sha512-ifM7dm47GHosxoi/XFvlzalqh9xo1zEXZlFskDBgvV2vDuW0dHHDFnoXWiRZcyM9FEG3yCiF87p/DHEZePhDVg==, tarball: file:resynth-sdk.tgz}
+    resolution: {integrity: sha512-VSovXjgT1ZTgwNOXEEgJbo7I2PfD0WdKcbBCL/J8SLDETq//LcEpdUWK2zbvpHre4J7t0NrMub5x5bwG6Hfr9Q==, tarball: file:resynth-sdk.tgz}
     name: '@resynth/resynth-sdk'
     version: 0.0.1
     dependencies:

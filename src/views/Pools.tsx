@@ -1,5 +1,4 @@
-import { useMemo, useState } from "react";
-import { useTheme } from "styled-components";
+import { ReactNode, useMemo, useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useNetwork } from "../contexts/NetworkProvider";
 import { useResynth } from "../contexts/ResynthProvider";
@@ -8,11 +7,19 @@ import { openTxInExplorer } from "../utils/explore";
 import { notify } from "../utils/notify";
 import { Flexbox } from "../components/Layout";
 import { ExternalLink, UnknownToken } from "../components/Icons";
-import { useCollateralBalance, useSynthBalance } from "../hooks/useBalance";
+import { useBalance } from "../hooks/useBalance";
 import { assert } from "../utils/errors";
-import { getMintSyntheticAssetTransaction } from "../actions/mintSyntheticAsset";
 import { SwapBuilder } from "../components/SwapBuilder/SwapBuilder";
-import { sendTransaction } from "../actions/sendTransaction";
+import { useSwapPool } from "../hooks/useSwapPool";
+import { translateAddress } from "@coral-xyz/anchor";
+import { syntheticMintPDA } from "@resynth/resynth-sdk";
+import { AccentText } from "../components/Typography";
+import { Transaction } from "@solana/web3.js";
+import {
+  getDepositSwapPoolTransaction,
+  getInitializeSwapPoolTransaction,
+  sendMintSyntheticTransaction,
+} from "../actions/depositSwapPool";
 
 function logoUrl(oracle: string) {
   return `/img/tokens/${oracle}.png`;
@@ -21,49 +28,34 @@ function logoUrl(oracle: string) {
 // When images are added to the project, set to true or delete the variable
 const IMAGES_EXIST = false;
 
-export const Mint = () => {
-  const theme = useTheme();
+export const Pools = () => {
   const { network } = useNetwork();
   const { connection } = useConnection();
   const wallet = useWallet();
   const { setIsWalletModalOpen } = useModals();
-  const { client, isClientLoading, oracle, setOracle } = useResynth();
-  const collateralBalance = useCollateralBalance();
-  const syntheticBalance = useSynthBalance();
+  const { client, isClientLoading, mint1, mint2, symbol1, symbol2, setMints } =
+    useResynth();
+  const inputBalance = useBalance(mint1);
+  const outputBalance = useBalance(mint2);
+  const { swapPoolData, isSwapPoolLoading } = useSwapPool();
+  const swapPoolExists = !!swapPoolData;
   const [isSendingTx, setIsSendingTx] = useState(false);
   const [wasTxError, setWasTxError] = useState(false);
   const oracles = client.config.oracles;
   assert(oracles);
 
-  // Collateral input value
-  const collateralValue = useMemo(
-    () => ({
-      key: client.config.collateralSymbol,
-      label: client.config.collateralSymbol,
-      leftElement: IMAGES_EXIST ? (
-        <img
-          key={client.config.collateralSymbol}
-          width="20px"
-          src={logoUrl(client.config.collateralSymbol)}
-          alt={client.config.collateralSymbol}
-        />
-      ) : (
-        <UnknownToken key={client.config.collateralSymbol} size="20px" />
-      ),
-      // rightElement: (
-      //   <AccentText key={label} size="xs">
-      //     {bigIntToTokens(token.balance, token.configuration.decimals)}
-      //   </AccentText>
-      // ),
-    }),
-    []
-  );
+  let poolInitializeNotice: ReactNode;
+  if (!swapPoolExists) {
+    poolInitializeNotice = (
+      <AccentText className="text-center w-[100%]">
+        A new pool will be initialized using your deposit.
+      </AccentText>
+    );
+  }
 
-  // Token options / input & output tokens
-  const collateralOptions = useMemo(() => [collateralValue], []);
-  const syntheticOptions = useMemo(
-    () =>
-      Object.keys(oracles).map((label) => ({
+  const tokenOptions = useMemo(() => {
+    return [client.config.collateralSymbol, ...Object.keys(oracles)].map(
+      (label: string) => ({
         key: label,
         label: label,
         leftElement: IMAGES_EXIST ? (
@@ -76,53 +68,44 @@ export const Mint = () => {
         //     {bigIntToTokens(token.balance, token.configuration.decimals)}
         //   </AccentText>
         // ),
-      })),
-    []
-  );
+      })
+    );
+  }, [oracles]);
 
-  const syntheticValue = syntheticOptions.find(
-    (option) => option.label === oracle
-  );
+  // Token input values
+  const token1Value = tokenOptions.find((option) => option.label === symbol1);
+  const token2Value = tokenOptions.find((option) => option.label === symbol2);
 
-  assert(collateralValue);
-  assert(syntheticValue);
+  assert(token1Value);
+  assert(token2Value);
 
   // Swap type and amounts in/out
-  const [swapType, setSwapType] = useState<"mint" | "burn">("mint");
-  const [amountCollateral, setAmountCollateral] = useState("0");
-  const [amountSynthetic, setAmountSynthetic] = useState("0");
+  const [amountToken1, setAmountToken1] = useState("0");
+  const [amountToken2, setAmountToken2] = useState("0");
 
-  const inputTokenLabel =
-    swapType === "mint" ? "Input collateral" : "Input Synthetic";
-  const outputTokenLabel =
-    swapType === "mint" ? "Output Synthetic" : "Output Collateral";
+  const inputTokenLabel = "Input collateral";
+  const outputTokenLabel = "Input Synthetic";
 
-  const inputLabel = "Amount in";
-  const outputLabel = "Amount out";
+  const inputLabel = "Collateral deposit";
+  const outputLabel = "Synthetic deposit";
 
-  const inputTokenOptions =
-    swapType === "mint" ? collateralOptions : syntheticOptions;
-  const outputTokenOptions =
-    swapType === "mint" ? syntheticOptions : collateralOptions;
+  const inputTokenOptions = tokenOptions;
+  const outputTokenOptions = tokenOptions;
 
-  const inputToken =
-    swapType === "mint" ? collateralValue.label : syntheticValue.label;
-  const outputToken =
-    swapType === "mint" ? syntheticValue.label : collateralValue.label;
+  const inputToken = token1Value.label;
+  const outputToken = token2Value.label;
 
-  const inputValue = swapType === "mint" ? collateralValue : syntheticValue;
-  const outputValue = swapType === "mint" ? syntheticValue : collateralValue;
+  const inputValue = token1Value;
+  const outputValue = token2Value;
 
-  const amountIn = swapType === "mint" ? amountCollateral : amountSynthetic;
-  const amountOut = swapType === "mint" ? amountSynthetic : amountCollateral;
+  const amountIn = amountToken1;
+  const amountOut = amountToken2;
 
-  const maxAmountIn = Number.MAX_SAFE_INTEGER;
-  const maxAmountOut = Number.MAX_SAFE_INTEGER;
+  const maxAmountIn = inputBalance.balance;
+  const maxAmountOut = outputBalance.balance;
 
-  const inputTokenDisabled =
-    swapType === "mint" || isSendingTx || isClientLoading;
-  const outputTokenDisabled =
-    swapType === "burn" || isSendingTx || isClientLoading;
+  const inputTokenDisabled = isSendingTx || isClientLoading;
+  const outputTokenDisabled = isSendingTx || isClientLoading;
 
   const inputDisabled = !inputToken || isSendingTx || isClientLoading;
   const outputDisabled = !outputToken || isSendingTx || isClientLoading;
@@ -139,37 +122,43 @@ export const Mint = () => {
     (wallet.connected &&
       (!inputToken || !amountIn || !outputToken || !amountOut));
 
-  const setInputToken = (token: string) => {
-    assert(swapType === "mint", "Can't set collateral token");
-    setOracle(token);
+  const getMint = (symbol: string) => {
+    if (symbol === client.config.collateralSymbol) {
+      return translateAddress(client.config.collateralMint);
+    } else {
+      return syntheticMintPDA(
+        client.programId,
+        translateAddress(oracles[symbol].oracle)
+      );
+    }
   };
-
-  const setOutputToken = (token: string) => {
-    assert(swapType === "burn", "Can't set collateral token");
-    setOracle(token);
+  const setInputToken = (symbol: string) => {
+    const mint = getMint(symbol);
+    setMints(mint, symbol, mint2, symbol2);
+  };
+  const setOutputToken = (symbol: string) => {
+    const mint = getMint(symbol);
+    setMints(mint1, symbol1, mint, symbol);
   };
 
   const setAmountIn = (amount: string) => {
-    swapType === "mint"
-      ? setAmountCollateral(amount)
-      : setAmountSynthetic(amount);
+    setAmountToken1(amount);
+    // set
   };
-
   const setAmountOut = (amount: string) => {
-    swapType === "mint"
-      ? setAmountSynthetic(amount)
-      : setAmountCollateral(amount);
+    setAmountToken2(amount);
   };
 
   // Reset all swap data
   const resetSwapData = () => {
-    setAmountCollateral("");
-    setOracle("nSOL");
-    setAmountSynthetic("");
-  };
-
-  const switchInputOutput = () => {
-    setSwapType((swapType) => (swapType === "mint" ? "burn" : "mint"));
+    setAmountToken1("");
+    setAmountToken2("");
+    setMints(
+      getMint(client.config.collateralSymbol),
+      client.config.collateralSymbol,
+      getMint("nSOL"),
+      "nSOL"
+    );
   };
 
   // Submit swap transaction
@@ -191,20 +180,35 @@ export const Mint = () => {
 
     let txId = "";
     try {
-      const { transaction, lastValidBlockHeight } =
-        await getMintSyntheticAssetTransaction(
-          swapType === "mint",
-          client,
-          oracle,
-          +amountCollateral,
-          +amountSynthetic,
-          collateralBalance.balanceAddress,
-          syntheticBalance.balanceAddress
-        );
+      let transaction: Transaction;
+      let lastValidBlockHeight: number;
+      if (!swapPoolExists) {
+        ({ transaction, lastValidBlockHeight } =
+          await getInitializeSwapPoolTransaction(
+            client,
+            +amountIn,
+            +amountOut,
+            mint1,
+            mint2,
+            inputBalance.balanceAddress,
+            outputBalance.balanceAddress
+          ));
+      } else {
+        ({ transaction, lastValidBlockHeight } =
+          await getDepositSwapPoolTransaction(
+            client,
+            +amountIn,
+            +amountOut,
+            mint1,
+            mint2,
+            inputBalance.balanceAddress,
+            outputBalance.balanceAddress
+          ));
+      }
 
       const signedTransaction = await wallet.signTransaction(transaction);
 
-      txId = await sendTransaction(
+      txId = await sendMintSyntheticTransaction(
         connection,
         signedTransaction,
         lastValidBlockHeight
@@ -271,7 +275,9 @@ export const Mint = () => {
       // misc
       wasTxError={wasTxError}
       switchInputOutputDisabled={true}
-      switchInputOutput={switchInputOutput}
+      switchInputOutputElement={"+"}
+      switchInputOutput={() => {}}
+      slippageElement={poolInitializeNotice}
     />
   );
 };

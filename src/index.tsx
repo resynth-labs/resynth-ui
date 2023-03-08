@@ -14,6 +14,7 @@ import { Nav, Notifications } from "./components/Layout";
 import { Swap } from "./views/Swap";
 import { Lander } from "./views/Lander";
 import { Mint } from "./views/Mint";
+import { Pools } from "./views/Pools";
 
 const ThemedApp = () => {
   const { themeMode } = useThemeMode();
@@ -28,6 +29,7 @@ const ThemedApp = () => {
             <Route index path="/" element={<Lander />} />
             <Route path="/swap" element={<Swap />} />
             <Route path="/mint" element={<Mint />} />
+            <Route path="/pools" element={<Pools />} />
           </Routes>
         </BrowserRouter>
         <Notifications />

@@ -34,7 +34,7 @@ const ROUTES: {
     label: "Pools",
     icon: <SwapArrows color="primary" />,
     isExternal: false,
-    isDisabled: true,
+    isDisabled: false,
   },
 ];
 

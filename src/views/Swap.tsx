@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import styled, { useTheme } from "styled-components";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useNetwork } from "../contexts/NetworkProvider";
 import { useResynth } from "../contexts/ResynthProvider";
 import { useModals } from "../contexts/ModalsProvider";
-import { bigIntToTokens } from "../utils/numbers";
 import { openTxInExplorer } from "../utils/explore";
 import { notify } from "../utils/notify";
 import { color } from "../styles/mixins";
@@ -16,6 +15,10 @@ import { ExternalLink, SwapArrows, UnknownToken } from "../components/Icons";
 import { PublicKey } from "@solana/web3.js";
 import { SwapContainer } from "../components/Containers/Swap/SwapContainer";
 import { Disclaimer } from "../components/Disclaimer/Disclaimer";
+import { useBalance } from "../hooks/useBalance";
+import { assert } from "../utils/errors";
+import { syntheticMintPDA, SYNTH_DECIMALS } from "@resynth/resynth-sdk";
+import { translateAddress } from "@coral-xyz/anchor";
 
 const SlippageButton = styled(Button)<{ isActive: boolean }>`
   width: 75px;
@@ -36,9 +39,8 @@ const SlippageButton = styled(Button)<{ isActive: boolean }>`
   }}
 `;
 
-// =========== Dummy data to get this rendering ===========
 interface Token {
-  balance: bigint;
+  balance: number;
 
   configuration: {
     mint: PublicKey;
@@ -47,37 +49,6 @@ interface Token {
     decimals: number;
   };
 }
-const markets = [
-  {
-    configuration: {
-      baseSymbol: "USDC",
-      quoteSymbol: "nAPPL",
-    },
-  },
-];
-const tokens: Record<string, Token> = {
-  USDC: {
-    balance: BigInt(125 * 10 ** 7),
-    configuration: {
-      mint: new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"),
-      symbol: "USDC",
-      logoUrl:
-        "data:image/svg+xml;base64,PHN2ZyBkYXRhLW5hbWU9Ijg2OTc3Njg0LTEyZGItNDg1MC04ZjMwLTIzM2E3YzI2N2QxMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2aWV3Qm94PSIwIDAgMjAwMCAyMDAwIj4KICA8cGF0aCBkPSJNMTAwMCAyMDAwYzU1NC4xNyAwIDEwMDAtNDQ1LjgzIDEwMDAtMTAwMFMxNTU0LjE3IDAgMTAwMCAwIDAgNDQ1LjgzIDAgMTAwMHM0NDUuODMgMTAwMCAxMDAwIDEwMDB6IiBmaWxsPSIjMjc3NWNhIi8+CiAgPHBhdGggZD0iTTEyNzUgMTE1OC4zM2MwLTE0NS44My04Ny41LTE5NS44My0yNjIuNS0yMTYuNjYtMTI1LTE2LjY3LTE1MC01MC0xNTAtMTA4LjM0czQxLjY3LTk1LjgzIDEyNS05NS44M2M3NSAwIDExNi42NyAyNSAxMzcuNSA4Ny41IDQuMTcgMTIuNSAxNi42NyAyMC44MyAyOS4xNyAyMC44M2g2Ni42NmMxNi42NyAwIDI5LjE3LTEyLjUgMjkuMTctMjkuMTZ2LTQuMTdjLTE2LjY3LTkxLjY3LTkxLjY3LTE2Mi41LTE4Ny41LTE3MC44M3YtMTAwYzAtMTYuNjctMTIuNS0yOS4xNy0zMy4zMy0zMy4zNGgtNjIuNWMtMTYuNjcgMC0yOS4xNyAxMi41LTMzLjM0IDMzLjM0djk1LjgzYy0xMjUgMTYuNjctMjA0LjE2IDEwMC0yMDQuMTYgMjA0LjE3IDAgMTM3LjUgODMuMzMgMTkxLjY2IDI1OC4zMyAyMTIuNSAxMTYuNjcgMjAuODMgMTU0LjE3IDQ1LjgzIDE1NC4xNyAxMTIuNXMtNTguMzQgMTEyLjUtMTM3LjUgMTEyLjVjLTEwOC4zNCAwLTE0NS44NC00NS44NC0xNTguMzQtMTA4LjM0LTQuMTYtMTYuNjYtMTYuNjYtMjUtMjkuMTYtMjVoLTcwLjg0Yy0xNi42NiAwLTI5LjE2IDEyLjUtMjkuMTYgMjkuMTd2NC4xN2MxNi42NiAxMDQuMTYgODMuMzMgMTc5LjE2IDIyMC44MyAyMDB2MTAwYzAgMTYuNjYgMTIuNSAyOS4xNiAzMy4zMyAzMy4zM2g2Mi41YzE2LjY3IDAgMjkuMTctMTIuNSAzMy4zNC0zMy4zM3YtMTAwYzEyNS0yMC44NCAyMDguMzMtMTA4LjM0IDIwOC4zMy0yMjAuODR6IiBmaWxsPSIjZmZmIi8+CiAgPHBhdGggZD0iTTc4Ny41IDE1OTUuODNjLTMyNS0xMTYuNjYtNDkxLjY3LTQ3OS4xNi0zNzAuODMtODAwIDYyLjUtMTc1IDIwMC0zMDguMzMgMzcwLjgzLTM3MC44MyAxNi42Ny04LjMzIDI1LTIwLjgzIDI1LTQxLjY3VjMyNWMwLTE2LjY3LTguMzMtMjkuMTctMjUtMzMuMzMtNC4xNyAwLTEyLjUgMC0xNi42NyA0LjE2LTM5NS44MyAxMjUtNjEyLjUgNTQ1Ljg0LTQ4Ny41IDk0MS42NyA3NSAyMzMuMzMgMjU0LjE3IDQxMi41IDQ4Ny41IDQ4Ny41IDE2LjY3IDguMzMgMzMuMzQgMCAzNy41LTE2LjY3IDQuMTctNC4xNiA0LjE3LTguMzMgNC4xNy0xNi42NnYtNTguMzRjMC0xMi41LTEyLjUtMjkuMTYtMjUtMzcuNXpNMTIyOS4xNyAyOTUuODNjLTE2LjY3LTguMzMtMzMuMzQgMC0zNy41IDE2LjY3LTQuMTcgNC4xNy00LjE3IDguMzMtNC4xNyAxNi42N3Y1OC4zM2MwIDE2LjY3IDEyLjUgMzMuMzMgMjUgNDEuNjcgMzI1IDExNi42NiA0OTEuNjcgNDc5LjE2IDM3MC44MyA4MDAtNjIuNSAxNzUtMjAwIDMwOC4zMy0zNzAuODMgMzcwLjgzLTE2LjY3IDguMzMtMjUgMjAuODMtMjUgNDEuNjdWMTcwMGMwIDE2LjY3IDguMzMgMjkuMTcgMjUgMzMuMzMgNC4xNyAwIDEyLjUgMCAxNi42Ny00LjE2IDM5NS44My0xMjUgNjEyLjUtNTQ1Ljg0IDQ4Ny41LTk0MS42Ny03NS0yMzcuNS0yNTguMzQtNDE2LjY3LTQ4Ny41LTQ5MS42N3oiIGZpbGw9IiNmZmYiLz4KPC9zdmc+Cg==",
-      decimals: 6,
-    },
-  },
-  nAPPL: {
-    balance: BigInt(3.5 * 10 ** 6),
-    configuration: {
-      mint: PublicKey.default,
-      symbol: "nAAPL",
-      logoUrl:
-        "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjxzdmcgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB3aWR0aD0iODQyLjMyMDA3IiBoZWlnaHQ9IjEwMDAuMDAwMSI+CiAgPHBhdGggZmlsbD0iI2IzYjNiMyIgZD0iTTgyNC42NjYzNiA3NzkuMzAzNjNjLTE1LjEyMjk5IDM0LjkzNzI0LTMzLjAyMzY4IDY3LjA5Njc0LTUzLjc2MzggOTYuNjYzNzQtMjguMjcwNzYgNDAuMzA3NC01MS40MTgyIDY4LjIwNzgtNjkuMjU3MTcgODMuNzAxMi0yNy42NTM0NyAyNS40MzEzLTU3LjI4MjIgMzguNDU1Ni04OS4wMDk2NCAzOS4xOTYzLTIyLjc3NzA4IDAtNTAuMjQ1MzktNi40ODEzLTgyLjIxOTczLTE5LjYyOS0zMi4wNzkyNi0xMy4wODYxLTYxLjU1OTg1LTE5LjU2NzMtODguNTE1ODMtMTkuNTY3My0yOC4yNzA3NSAwLTU4LjU5MDgzIDYuNDgxMi05MS4wMjE5MyAxOS41NjczLTMyLjQ4MDUzIDEzLjE0NzctNTguNjQ2MzkgMTkuOTk5NC03OC42NTE5NiAyMC42Nzg0LTMwLjQyNTAxIDEuMjk2MjMtNjAuNzUxMjMtMTIuMDk4NS05MS4wMjE5My00MC4yNDU3LTE5LjMyMDM5LTE2Ljg1MTQtNDMuNDg2MzItNDUuNzM5NC03Mi40MzYwNy04Ni42NjQxLTMxLjA2MDc3OC00My43MDI0LTU2LjU5NzA0MS05NC4zNzk4My03Ni42MDI2MDktMTUyLjE1NTg2QzEwLjc0MDQxNiA2NTguNDQzMDkgMCA1OTguMDEyODMgMCA1MzkuNTA4NDVjMC02Ny4wMTY0OCAxNC40ODEwNDQtMTI0LjgxNzIgNDMuNDg2MzM2LTE3My4yNTQwMUM2Ni4yODE5NCAzMjcuMzQ4MjMgOTYuNjA4MTggMjk2LjY1NzggMTM0LjU2MzggMjc0LjEyNzZjMzcuOTU1NjYtMjIuNTMwMTYgNzguOTY2NzYtMzQuMDExMjkgMTIzLjEzMjEtMzQuNzQ1ODUgMjQuMTY1OTEgMCA1NS44NTYzMyA3LjQ3NTA4IDk1LjIzNzg0IDIyLjE2NiAzOS4yNzA0MiAxNC43NDAyOSA2NC40ODU3MSAyMi4yMTUzOCA3NS41NDA5MSAyMi4yMTUzOCA4LjI2NTE4IDAgMzYuMjc2NjgtOC43NDA1IDgzLjc2MjktMjYuMTY1ODcgNDQuOTA2MDctMTYuMTYwMDEgODIuODA2MTQtMjIuODUxMTggMTEzLjg1NDU4LTIwLjIxNTQ2IDg0LjEzMzI2IDYuNzg5OTIgMTQ3LjM0MTIyIDM5Ljk1NTU5IDE4OS4zNzY5OSA5OS43MDY4Ni03NS4yNDQ2MyA0NS41OTEyMi0xMTIuNDY1NzMgMTA5LjQ0NzMtMTExLjcyNTAyIDE5MS4zNjQ1Ni42Nzg5OSA2My44MDY3IDIzLjgyNjQzIDExNi45MDM4NCA2OS4zMTg4OCAxNTkuMDYzMDkgMjAuNjE2NjQgMTkuNTY3MjcgNDMuNjQwNjYgMzQuNjkwMjcgNjkuMjU3MSA0NS40MzA3LTUuNTU1MzEgMTYuMTEwNjItMTEuNDE5MzMgMzEuNTQyMjUtMTcuNjUzNzIgNDYuMzU2NjJ6TTYzMS43MDkyNiAyMC4wMDU3YzAgNTAuMDExNDEtMTguMjcxMDggOTYuNzA2OTMtNTQuNjg5NyAxMzkuOTI3ODItNDMuOTQ5MzIgNTEuMzgxMTgtOTcuMTA4MTcgODEuMDcxNjItMTU0Ljc1NDU5IDc2LjM4NjU5LS43MzQ1NC01Ljk5OTgzLTEuMTYwNDUtMTIuMzE0NDQtMS4xNjA0NS0xOC45NTAwMyAwLTQ4LjAxMDkxIDIwLjkwMDYtOTkuMzkyMDcgNTguMDE2NzgtMTQxLjQwMzE0IDE4LjUzMDI3LTIxLjI3MDk0IDQyLjA5NzQ2LTM4Ljk1NzQ0IDcwLjY3Njg1LTUzLjA2NjNDNTc4LjMxNTggOS4wMDIyOSA2MDUuMjkwMyAxLjMxNjIxIDYzMC42NTk4OCAwYy43NDA3NiA2LjY4NTc1IDEuMDQ5MzggMTMuMzcxOTEgMS4wNDkzOCAyMC4wMDUwNXoiLz4KPC9zdmc+",
-      decimals: 6,
-    },
-  },
-};
-// =========== Dummy data to get this rendering ===========
 
 export const Swap = () => {
   const theme = useTheme();
@@ -85,77 +56,109 @@ export const Swap = () => {
   const { connection } = useConnection();
   const wallet = useWallet();
   const { setIsWalletModalOpen } = useModals();
-  const { client, isClientLoading } = useResynth();
-  // const { markets, tokens } = client;
-  const marketPairs = Object.values(markets)
-    .filter((market) => market !== undefined)
-    .map(
-      (market) =>
-        `${market.configuration?.baseSymbol}/${market.configuration?.quoteSymbol}`
-    );
+  const {
+    client,
+    isClientLoading,
+    oracle,
+    mint1,
+    symbol1,
+    mint2,
+    symbol2,
+    setMints,
+  } = useResynth();
+  const token1Balance = useBalance(mint1);
+  const token2Balance = useBalance(mint2);
   const [isSendingTx, setIsSendingTx] = useState(false);
   const [wasTxError, setWasTxError] = useState(false);
+  const oracles = client.config.oracles;
+  assert(oracles);
+
+  function symbolToToken(symbol: string): Token {
+    const oracle = oracles![symbol];
+    if (oracle) {
+      return {
+        balance: 0,
+        configuration: {
+          mint: syntheticMintPDA(client.programId, oracle.oracle),
+          symbol: symbol,
+          logoUrl: undefined,
+          decimals: SYNTH_DECIMALS,
+        },
+      };
+    } else {
+      return {
+        balance: 0,
+        configuration: {
+          // FIXME: support other tokens
+          mint: translateAddress(client.config.collateralMint),
+          symbol: symbol,
+          logoUrl: undefined,
+          decimals: client.config.collateralDecimals,
+        },
+      };
+    }
+  }
+
+  const tokens = useMemo(
+    () =>
+      [client.config.collateralSymbol, ...Object.keys(oracles)].map(
+        symbolToToken
+      ),
+    [oracles]
+  );
 
   // Token options / input & output tokens
-  const tokenOptions = Object.values(tokens).map((token: Token) => ({
-    key: token.configuration.mint.toBase58(),
-    label: token.configuration.symbol,
-    leftElement: token.configuration.logoUrl ? (
-      <img
-        key={token.configuration.mint.toBase58()}
-        width="20px"
-        src={token.configuration.logoUrl}
-        alt={token.configuration.symbol}
-      />
-    ) : (
-      <UnknownToken key={token.configuration.mint.toBase58()} size="20px" />
-    ),
-    rightElement: (
-      <AccentText key={token.configuration.mint.toBase58()} size="xs">
-        {bigIntToTokens(token.balance, token.configuration.decimals)}
-      </AccentText>
-    ),
-  }));
-  const [inputToken, setInputToken] = useState<Token>();
-  const [outputToken, setOutputToken] = useState<Token>();
-  const inputTokenOptions = outputToken
-    ? tokenOptions.filter(
-        (token) =>
-          marketPairs.includes(
-            `${outputToken.configuration.symbol}/${token.label}`
-          ) ||
-          marketPairs.includes(
-            `${token.label}/${outputToken.configuration.symbol}`
-          )
-      )
-    : tokenOptions;
-  const outputTokenOptions = inputToken
-    ? tokenOptions.filter(
-        (token) =>
-          marketPairs.includes(
-            `${inputToken.configuration.symbol}/${token.label}`
-          ) ||
-          marketPairs.includes(
-            `${token.label}/${inputToken.configuration.symbol}`
-          )
-      )
-    : tokenOptions;
+  const tokenOptions = useMemo(
+    () =>
+      tokens.map((token: Token) => ({
+        key: token.configuration.mint.toBase58(),
+        label: token.configuration.symbol,
+        leftElement: token.configuration.logoUrl ? (
+          <img
+            key={token.configuration.mint.toBase58()}
+            width="20px"
+            src={token.configuration.logoUrl}
+            alt={token.configuration.symbol}
+          />
+        ) : (
+          <UnknownToken key={token.configuration.mint.toBase58()} size="20px" />
+        ),
+        rightElement: (
+          <AccentText key={token.configuration.mint.toBase58()} size="xs">
+            {token.balance}
+          </AccentText>
+        ),
+      })),
+    [tokens]
+  );
 
-  // Current market based on input and output tokens
-  const market =
-    inputToken &&
-    outputToken &&
-    Object.values(markets).filter((market) => {
-      if (market.configuration) {
-        const marketPair = `${market.configuration?.baseSymbol}/${market.configuration?.quoteSymbol}`;
-        return (
-          marketPair ===
-            `${inputToken.configuration.symbol}/${outputToken.configuration.symbol}` ||
-          marketPair ===
-            `${outputToken.configuration.symbol}/${inputToken.configuration.symbol}`
-        );
-      }
-    })[0];
+  const inputToken = tokens.find((token) =>
+    token.configuration.mint.equals(mint1)
+  );
+  const outputToken = tokens.find((token) =>
+    token.configuration.mint.equals(mint2)
+  );
+  assert(inputToken);
+  assert(outputToken);
+
+  function setInputToken(token: SelectOption) {
+    setMints(new PublicKey(token.key), token.label, mint2, symbol2);
+  }
+  function setOutputToken(token: SelectOption) {
+    setMints(mint1, symbol1, new PublicKey(token.key), token.label);
+  }
+  function switchTokens() {
+    assert(inputToken);
+    assert(outputToken);
+    setMints(
+      outputToken.configuration.mint,
+      outputToken.configuration.symbol,
+      inputToken.configuration.mint,
+      inputToken.configuration.symbol
+    );
+    setAmountIn(amountOut);
+    setAmountOut(amountIn);
+  }
 
   // Swap type and amounts in/out
   const [swapType, setSwapType] = useState<"exactIn" | "exactOut">("exactIn");
@@ -164,9 +167,7 @@ export const Swap = () => {
   const [amountOut, setAmountOut] = useState("");
 
   // Maximum amounts in/out
-  const maxAmountIn = inputToken
-    ? bigIntToTokens(inputToken.balance, inputToken.configuration.decimals)
-    : 0;
+  const maxAmountIn = inputToken?.balance ?? 0;
   /*
   const maxAmountOut =
     market && inputToken && outputToken
@@ -185,15 +186,17 @@ export const Swap = () => {
 
   // Reset all swap data
   const resetSwapData = () => {
-    setInputToken(undefined);
     setAmountIn("");
-    setOutputToken(undefined);
     setAmountOut("");
   };
 
   // Submit swap transaction
   const submitSwap = async () => {
-    if (!market || !wallet.publicKey || !wallet.signTransaction) return;
+    if (!wallet.publicKey || !wallet.signTransaction) {
+      return;
+    }
+    assert(inputToken);
+    assert(outputToken);
     setIsSendingTx(true);
     const notificationId = notify({
       content: "Sending transaction...",
@@ -249,8 +252,6 @@ export const Swap = () => {
 
   // Update amounts in/out on change to their compliment
   useEffect(() => {
-    if (!market) return;
-
     // Amount out
     if (swapType === "exactIn" && inputToken && amountIn) {
       setAmountOut("0");
@@ -284,7 +285,7 @@ export const Swap = () => {
     }
 
     setWasTxError(false);
-  }, [market, amountIn, amountOut]);
+  }, [amountIn, amountOut]);
 
   return (
     <>
@@ -305,11 +306,9 @@ export const Swap = () => {
                   option.key === inputToken?.configuration.mint.toBase58()
               )[0]
             }
-            options={inputTokenOptions}
+            options={tokenOptions}
             noOptionsMessage="No input tokens for this market"
-            onChange={(token: SelectOption) =>
-              setInputToken(tokens[token.label])
-            }
+            onChange={setInputToken}
             needsValue={wallet.connected && !inputToken}
             error={wasTxError}
             disabled={isSendingTx || isClientLoading}
@@ -337,12 +336,7 @@ export const Swap = () => {
         {/** SWITCH DATA **/}
         <Flexbox marginY="base">
           <Button
-            onClick={() => {
-              setInputToken(outputToken);
-              setAmountIn(amountOut);
-              setOutputToken(inputToken);
-              setAmountOut(amountIn);
-            }}
+            onClick={switchTokens}
             disabled={isSendingTx || !inputToken || !outputToken}
           >
             <SwapArrows size={theme.font.size.lg} />
@@ -364,11 +358,9 @@ export const Swap = () => {
                   option.key === outputToken?.configuration.mint.toBase58()
               )[0]
             }
-            options={outputTokenOptions}
+            options={tokenOptions}
             noOptionsMessage="No output tokens for this market"
-            onChange={(token: SelectOption) =>
-              setOutputToken(tokens[token.label])
-            }
+            onChange={setOutputToken}
             needsValue={wallet.connected && !inputToken}
             error={wasTxError}
             disabled={isSendingTx || isClientLoading}
