@@ -17,6 +17,6 @@ export function assert(value: unknown, message?: string): asserts value {
 
 export function logException(exception: any) {
   console.log(exception);
-  // TODO, add sentry
+  // FIXME, add sentry
   // return captureException(exception);
 }

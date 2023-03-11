@@ -264,13 +264,13 @@ export const getInitializeSwapPoolTransaction = async (
       sourceA,
       userTransferAuthority.publicKey,
       walletPubkey,
-      BigInt(Number(maximumAmountA)) //TODO this isn't great
+      BigInt(maximumAmountA.toString())
     ),
     createApproveInstruction(
       sourceB,
       userTransferAuthority.publicKey,
       walletPubkey,
-      BigInt(Number(maximumAmountB)) //TODO this isn't great
+      BigInt(maximumAmountB.toString())
     )
   );
 
