@@ -35,9 +35,10 @@ const FEES: Fees = {
   hostFeeDenominator: new BN(100),
 };
 
-const FEE_RECEIVER_WALLET = new PublicKey(
+export const FEE_RECEIVER_WALLET = new PublicKey(
   "4xjeC3hHwNADcRnQXhY8qNtRT4fGZDgMHtk5rnGn9LS5"
 );
+export const HOST_FEE_RECEIVER_WALLET = FEE_RECEIVER_WALLET;
 
 export const getDepositSwapPoolTransaction = async (
   resynthClient: ResynthClient,
@@ -104,8 +105,6 @@ export const getDepositSwapPoolTransaction = async (
     lpmint,
     lpmintInfo
   );
-
-  const feeReceiverWallet = FEE_RECEIVER_WALLET;
 
   assert(mintA.equals(mintA));
   assert(mintB.equals(mintB));
