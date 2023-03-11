@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import {
   Context,
@@ -91,13 +91,12 @@ export const ResynthProvider = ({
   const { network } = useNetwork();
   const { connection } = useConnection();
   const wallet = useWallet();
-  const [{ client, tokenSwap }, setClient] = useState<{
-    client: ResynthClient;
-    tokenSwap: TokenSwapClient;
-  }>({
-    client: undefined as any,
-    tokenSwap: undefined as any,
-  });
+  const { client, tokenSwap } = useMemo(() => {
+    const context = new Context(network, connection, wallet as any);
+    const client = new ResynthClient(context);
+    const tokenSwap = new TokenSwapClient(context);
+    return { client, tokenSwap };
+  }, [connection, network, wallet]);
   const [accounts, setAccounts] = useState<Accounts>(defaultAccounts);
 
   // FIXME! Allow updating collateral in the same way as the oracle
@@ -174,28 +173,12 @@ export const ResynthProvider = ({
     });
   }
 
-  const [isClientLoading, setIsClientLoading] = useState(false);
-  // After initial render, we can load async data from ResynthClient and reset
-  useEffect(() => {
-    try {
-      setIsClientLoading(true);
-      const context = new Context(network, connection, wallet as any);
-      const client = new ResynthClient(context);
-      const tokenSwap = new TokenSwapClient(context);
-      setClient({ client, tokenSwap });
-    } catch (err: unknown) {
-      console.error(err);
-    } finally {
-      setIsClientLoading(false);
-    }
-  }, [connection, network, wallet]);
-
   return (
     <ResynthContext.Provider
       value={{
         client,
         tokenSwap,
-        isClientLoading,
+        isClientLoading: false,
         oracle: accounts.oracle,
         oracleConfiguration: accounts.oracleConfiguration,
         collateral: accounts.collateral,

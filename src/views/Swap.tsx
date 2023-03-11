@@ -18,7 +18,11 @@ import { Disclaimer } from "../components/Disclaimer/Disclaimer";
 import { useBalance } from "../hooks/useBalance";
 import { assert } from "../utils/errors";
 import { syntheticMintPDA, SYNTH_DECIMALS } from "@resynth/resynth-sdk";
-import { translateAddress } from "@coral-xyz/anchor";
+import { BN, translateAddress } from "@coral-xyz/anchor";
+import { getSwapTransaction } from "../actions/swap";
+import { sendTransaction } from "../actions/sendTransaction";
+import { useCachedBlockhash } from "../hooks/useCachedBlockhash";
+import { useSwapPool } from "../hooks/useSwapPool";
 
 const SlippageButton = styled(Button)<{ isActive: boolean }>`
   width: 75px;
@@ -68,8 +72,10 @@ export const Swap = () => {
     symbol2,
     setMints,
   } = useResynth();
-  const token1Balance = useBalance(mint1);
-  const token2Balance = useBalance(mint2);
+  const { swapPool, swapWithoutFees } = useSwapPool();
+  const inputBalance = useBalance(mint1);
+  const outputBalance = useBalance(mint2);
+  const getBlockhash = useCachedBlockhash();
   const [isSendingTx, setIsSendingTx] = useState(false);
   const [wasTxError, setWasTxError] = useState(false);
   const oracles = client.config.oracles;
@@ -140,12 +146,53 @@ export const Swap = () => {
   assert(inputToken);
   assert(outputToken);
 
+  // Swap type and amounts in/out
+  // const [swapType, setSwapType] = useState<"exactIn" | "exactOut">("exactIn");
+  const [slippage, setSlippage] = useState<number | undefined>(0.005);
+  const [amountIn, setAmountIn] = useState("0");
+  const [amountOut, setAmountOut] = useState("0");
+
   function setInputToken(token: SelectOption) {
     setMints(new PublicKey(token.key), token.label, mint2, symbol2);
   }
   function setOutputToken(token: SelectOption) {
     setMints(mint1, symbol1, new PublicKey(token.key), token.label);
   }
+
+  function setInputAmount(amount: string) {
+    setAmountIn(amount);
+
+    const mint = translateAddress(mint1);
+    if (swapPool) {
+      const inputDecimals = mint.equals(swapPool.mintA)
+        ? swapPool.mintADecimals
+        : swapPool.mintBDecimals;
+      const outputDecimals = mint.equals(swapPool.mintA)
+        ? swapPool.mintBDecimals
+        : swapPool.mintADecimals;
+      const inputAmount = new BN(+amount * 10 ** inputDecimals);
+      const result = swapWithoutFees(inputAmount, mint);
+      if (result) {
+        let outputAmount =
+          result.destinationAmountSwapped.toNumber() / 10 ** outputDecimals;
+        if (slippage) {
+          const slippageCoefficient = 1 - slippage;
+          outputAmount *= slippageCoefficient;
+        }
+        setOutputAmount(
+          outputAmount.toLocaleString("fullwide", {
+            useGrouping: false,
+          })
+        );
+      }
+    }
+    // setSwapType("exactIn");
+  }
+  function setOutputAmount(amount: string) {
+    setAmountOut(amount);
+    // setSwapType("exactOut");
+  }
+
   function switchTokens() {
     assert(inputToken);
     assert(outputToken);
@@ -158,12 +205,6 @@ export const Swap = () => {
     setAmountIn(amountOut);
     setAmountOut(amountIn);
   }
-
-  // Swap type and amounts in/out
-  const [swapType, setSwapType] = useState<"exactIn" | "exactOut">("exactIn");
-  const [slippage, setSlippage] = useState<number | undefined>(0.005);
-  const [amountIn, setAmountIn] = useState("");
-  const [amountOut, setAmountOut] = useState("");
 
   // Maximum amounts in/out
   const maxAmountIn = inputToken?.balance ?? 0;
@@ -185,6 +226,7 @@ export const Swap = () => {
 
   // Reset all swap data
   const resetSwapData = () => {
+    console.log("Reset");
     setAmountIn("");
     setAmountOut("");
   };
@@ -204,17 +246,26 @@ export const Swap = () => {
 
     let txId = "";
     try {
-      // const swapTx = client.makeSwapTransaction(
-      //   inputToken.configuration.symbol,
-      //   swapType === "exactIn" ? parseFloat(amountIn) : 0,
-      //   outputToken.configuration.symbol,
-      //   swapType === "exactOut" ? parseFloat(amountOut) : 0
-      // );
+      const fromLamports = +amountIn * 10 ** inputBalance.decimals;
+      const toLamports = +amountOut * 10 ** outputBalance.decimals;
 
-      // txId = await wallet.sendTransaction(swapTx, connection);
-      // console.log("Successful swap: ", txId);
-      throw new Error("Swap not implemented");
-      alert("Swap not implemented");
+      const { blockhash, lastValidBlockHeight } = await getBlockhash();
+
+      const tx = await getSwapTransaction(
+        client,
+        inputToken.configuration.mint,
+        outputToken.configuration.mint,
+        inputBalance.balanceAddress,
+        outputBalance.exists ? outputBalance.balanceAddress : undefined,
+        fromLamports,
+        toLamports,
+        blockhash,
+        lastValidBlockHeight
+      );
+
+      const signed = await wallet.signTransaction(tx);
+
+      txId = await sendTransaction(connection, signed, lastValidBlockHeight);
     } catch (err) {
       console.error(err);
     }
@@ -246,15 +297,12 @@ export const Swap = () => {
     }
   };
 
-  // Anytime wallet changes, reset inputs
-  useEffect(resetSwapData, [wallet.connected]);
-
   // Update amounts in/out on change to their compliment
   useEffect(() => {
     // Amount out
+    /*
     if (swapType === "exactIn" && inputToken && amountIn) {
       setAmountOut("0");
-      /*
       setAmountOut(
         market
           .getAmountOut(
@@ -264,13 +312,13 @@ export const Swap = () => {
           )
           .toFixed(outputToken.configuration.decimals)
       );
-      */
     }
+    */
 
     // Amount in
+    /*
     if (swapType === "exactOut" && outputToken && amountOut) {
       setAmountIn("0");
-      /*
       setAmountIn(
         market
           .getAmountIn(
@@ -280,8 +328,8 @@ export const Swap = () => {
           )
           .toFixed(inputToken.configuration.decimals)
       );
-      */
     }
+    */
 
     setWasTxError(false);
   }, [amountIn, amountOut]);
@@ -320,12 +368,12 @@ export const Swap = () => {
             max={maxAmountIn}
             maxButton={{
               isActive: !!amountIn && Number(amountIn) === maxAmountIn,
-              onClick: () => setAmountIn(maxAmountIn.toString()),
+              onClick: () =>
+                setInputAmount(
+                  maxAmountIn.toLocaleString("fullwide", { useGrouping: false })
+                ),
             }}
-            onChange={(amount: string) => {
-              setAmountIn(amount);
-              setSwapType("exactIn");
-            }}
+            onChange={setInputAmount}
             needsValue={inputToken && !amountIn}
             error={wasTxError}
             disabled={!inputToken || isSendingTx || isClientLoading}
@@ -372,12 +420,14 @@ export const Swap = () => {
             max={maxAmountOut}
             maxButton={{
               isActive: !!amountOut && Number(amountOut) === maxAmountOut,
-              onClick: () => setAmountOut(maxAmountOut.toString()),
+              onClick: () =>
+                setOutputAmount(
+                  maxAmountOut.toLocaleString("fullwide", {
+                    useGrouping: false,
+                  })
+                ),
             }}
-            onChange={(amount: string) => {
-              setAmountOut(amount);
-              setSwapType("exactOut");
-            }}
+            onChange={setOutputAmount}
             needsValue={outputToken && !amountOut}
             error={wasTxError}
             disabled={!outputToken || isSendingTx || isClientLoading}
@@ -397,6 +447,7 @@ export const Swap = () => {
               <SlippageButton
                 onClick={() => setSlippage(slipPercentage)}
                 isActive={slippage === slipPercentage}
+                key={slipPercentage}
               >
                 <BodyText size="xs" weight="bold">
                   {slipPercentage * 100}%

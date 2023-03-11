@@ -18,8 +18,8 @@ import { Transaction } from "@solana/web3.js";
 import {
   getDepositSwapPoolTransaction,
   getInitializeSwapPoolTransaction,
-  sendMintSyntheticTransaction,
 } from "../actions/depositSwapPool";
+import { sendTransaction } from "../actions/sendTransaction";
 
 function logoUrl(oracle: string) {
   return `/img/tokens/${oracle}.png`;
@@ -46,8 +46,8 @@ export const Pools = () => {
   } = useResynth();
   const inputBalance = useBalance(mint1);
   const outputBalance = useBalance(mint2);
-  const { swapPoolData, isSwapPoolLoading } = useSwapPool();
-  const swapPoolExists = !!swapPoolData;
+  const { swapPool, isSwapPoolLoading } = useSwapPool();
+  const swapPoolExists = !!swapPool || isSwapPoolLoading;
   const [isSendingTx, setIsSendingTx] = useState(false);
   const [wasTxError, setWasTxError] = useState(false);
   const oracles = client.config.oracles;
@@ -119,8 +119,8 @@ export const Pools = () => {
 
   const submitLabel = wallet.connected
     ? isSendingTx
-      ? "Swapping..."
-      : "Swap"
+      ? "Supplying..."
+      : "Supply"
     : "Connect wallet";
 
   const submitDisabled =
@@ -160,7 +160,6 @@ export const Pools = () => {
   const resetSwapData = () => {
     setAmountToken1("");
     setAmountToken2("");
-    setMints(getMint(collateral), collateral, getMint("nSOL"), "nSOL");
   };
 
   // Submit swap transaction
@@ -210,7 +209,7 @@ export const Pools = () => {
 
       const signedTransaction = await wallet.signTransaction(transaction);
 
-      txId = await sendMintSyntheticTransaction(
+      txId = await sendTransaction(
         connection,
         signedTransaction,
         lastValidBlockHeight

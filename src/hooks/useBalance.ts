@@ -17,6 +17,7 @@ export interface UserBalance {
   balance: number;
   balanceAddress: PublicKey;
   decimals: number;
+  exists: boolean;
   isLoadingBalance: boolean;
   isError: boolean;
   getBalance: () => Promise<void>;
@@ -26,6 +27,7 @@ const loadingBalance: UserBalance = {
   balance: 0,
   balanceAddress: PublicKey.default,
   decimals: 0,
+  exists: false,
   isLoadingBalance: true,
   isError: false,
   getBalance: async () => {},
@@ -35,6 +37,7 @@ const errorBalance: UserBalance = {
   balance: 0,
   balanceAddress: PublicKey.default,
   decimals: 0,
+  exists: false,
   isLoadingBalance: false,
   isError: true,
   getBalance: async () => {},
@@ -121,13 +124,14 @@ async function getNativeBalance(
     return loadingBalance;
   }
 
-  // get unwrapped SOL balance
-  const walletState = await connection.getAccountInfo(publicKey);
-
   const [balanceAddress] = PublicKey.findProgramAddressSync(
     [publicKey.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()],
     ASSOCIATED_TOKEN_PROGRAM_ID
   );
+
+  // get unwrapped SOL balance
+  const [walletState, wrappedSolState] =
+    await connection.getMultipleAccountsInfo([publicKey, balanceAddress]);
 
   const decimals = 9;
 
@@ -135,6 +139,7 @@ async function getNativeBalance(
     balance: (walletState?.lamports ?? 0) / 10 ** decimals,
     balanceAddress,
     decimals,
+    exists: !!wrappedSolState,
     isLoadingBalance: false,
     isError: false,
     getBalance,
@@ -170,7 +175,9 @@ async function getTokenBalance(
     }
   }
 
+  let exists = true;
   if (!highestAddress) {
+    exists = false;
     [highestAddress] = PublicKey.findProgramAddressSync(
       [publicKey.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()],
       ASSOCIATED_TOKEN_PROGRAM_ID
@@ -181,6 +188,7 @@ async function getTokenBalance(
     balance: Number(highestBalance) / 10 ** decimals,
     balanceAddress: highestAddress,
     decimals,
+    exists,
     isLoadingBalance: false,
     isError: false,
     getBalance,

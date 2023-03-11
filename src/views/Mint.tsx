@@ -101,9 +101,9 @@ export const Mint = () => {
   const [amountSynthetic, setAmountSynthetic] = useState("0");
 
   const inputTokenLabel =
-    swapType === "mint" ? "Input collateral" : "Input Synthetic";
+    swapType === "mint" ? "Deposit Collateral" : "Burn Synthetic";
   const outputTokenLabel =
-    swapType === "mint" ? "Output Synthetic" : "Output Collateral";
+    swapType === "mint" ? "Mint Synthetic" : "Withdraw Collateral";
 
   const inputLabel = "Amount in";
   const outputLabel = "Amount out";
@@ -136,9 +136,13 @@ export const Mint = () => {
   const outputDisabled = !outputToken || isSendingTx || isClientLoading;
 
   const submitLabel = wallet.connected
-    ? isSendingTx
-      ? "Swapping..."
-      : "Swap"
+    ? swapType === "mint"
+      ? isSendingTx
+        ? "Minting..."
+        : "Mint"
+      : isSendingTx
+      ? "Burning..."
+      : "Burn"
     : "Connect wallet";
 
   const submitDisabled =
@@ -172,7 +176,6 @@ export const Mint = () => {
   // Reset all swap data
   const resetSwapData = () => {
     setAmountCollateral("");
-    setOracle("nSOL");
     setAmountSynthetic("");
   };
 
@@ -279,7 +282,7 @@ export const Mint = () => {
       submitDisabled={submitDisabled}
       // misc
       wasTxError={wasTxError}
-      switchInputOutputDisabled={true}
+      switchInputOutputDisabled={false}
       switchInputOutput={switchInputOutput}
     />
   );

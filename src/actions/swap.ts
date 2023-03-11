@@ -32,6 +32,9 @@ export async function getSwapTransaction(
   const { mintA, mintB, swapPool, authority, vaultA, vaultB, lpmint } =
     swapPoolPDA(tokenSwap.programId, sourceMint, destMint);
 
+  const sourceVault = sourceMint.equals(mintA) ? vaultA : vaultB;
+  const destVault = sourceMint.equals(mintA) ? vaultB : vaultA;
+
   const transaction = new Transaction({
     blockhash,
     feePayer: walletPubkey,
@@ -76,8 +79,8 @@ export async function getSwapTransaction(
       owner: walletPubkey,
       userTransferAuthority: userTransferAuthority.publicKey,
       sourceTokenAccount: source,
-      sourceVault: vaultA,
-      destVault: vaultB,
+      sourceVault,
+      destVault,
       destTokenAccount: dest,
       lpmint,
       feeReceiver,

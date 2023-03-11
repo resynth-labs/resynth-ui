@@ -13,24 +13,16 @@ type SwapPoolQuery = ClientSwapPoolQuery & {
 };
 
 const loadingSwapPool: SwapPoolQuery = {
-  swapPoolData: undefined,
-  mintADecimals: 0,
-  mintBDecimals: 0,
-  vaultAAmount: 0,
-  vaultBAmount: 0,
-  lpmintDecimals: 0,
+  swapPool: undefined,
+  swapWithoutFees: () => undefined,
   isSwapPoolLoading: true,
   isSwapPoolError: false,
   fetch: async () => {},
 };
 
 const errorSwapPool: SwapPoolQuery = {
-  swapPoolData: undefined,
-  mintADecimals: 0,
-  mintBDecimals: 0,
-  vaultAAmount: 0,
-  vaultBAmount: 0,
-  lpmintDecimals: 0,
+  swapPool: undefined,
+  swapWithoutFees: () => undefined,
   isSwapPoolLoading: false,
   isSwapPoolError: true,
   fetch: async () => {},

@@ -36,7 +36,7 @@ const FEES: Fees = {
 };
 
 export const FEE_RECEIVER_WALLET = new PublicKey(
-  "4xjeC3hHwNADcRnQXhY8qNtRT4fGZDgMHtk5rnGn9LS5"
+  "HjnXUGGMgtN9WaPAJxzdwnWip6f76xGp4rUMRoVicsLr"
 );
 export const HOST_FEE_RECEIVER_WALLET = FEE_RECEIVER_WALLET;
 
@@ -303,30 +303,3 @@ export const getInitializeSwapPoolTransaction = async (
 
   return { transaction, lastValidBlockHeight };
 };
-
-export async function sendMintSyntheticTransaction(
-  connection: Connection,
-  transaction: Transaction,
-  lastValidBlockHeight: number
-) {
-  const blockhash = transaction.recentBlockhash;
-  assert(blockhash);
-
-  const signature = await connection.sendRawTransaction(
-    transaction.serialize(),
-    { skipPreflight: true }
-  );
-
-  const {
-    value: { err },
-  } = await connection.confirmTransaction({
-    signature,
-    lastValidBlockHeight,
-    blockhash,
-  });
-
-  if (err) {
-    throw new Error(JSON.stringify(err));
-  }
-  return signature;
-}
