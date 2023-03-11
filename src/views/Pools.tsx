@@ -33,8 +33,17 @@ export const Pools = () => {
   const { connection } = useConnection();
   const wallet = useWallet();
   const { setIsWalletModalOpen } = useModals();
-  const { client, isClientLoading, mint1, mint2, symbol1, symbol2, setMints } =
-    useResynth();
+  const {
+    client,
+    isClientLoading,
+    mint1,
+    mint2,
+    symbol1,
+    symbol2,
+    collateral,
+    collateralConfiguration,
+    setMints,
+  } = useResynth();
   const inputBalance = useBalance(mint1);
   const outputBalance = useBalance(mint2);
   const { swapPoolData, isSwapPoolLoading } = useSwapPool();
@@ -54,22 +63,20 @@ export const Pools = () => {
   }
 
   const tokenOptions = useMemo(() => {
-    return [client.config.collateralSymbol, ...Object.keys(oracles)].map(
-      (label: string) => ({
-        key: label,
-        label: label,
-        leftElement: IMAGES_EXIST ? (
-          <img key={label} width="20px" src={logoUrl(label)} alt={label} />
-        ) : (
-          <UnknownToken key={label} size="20px" />
-        ),
-        // rightElement: (
-        //   <AccentText key={label} size="xs">
-        //     {bigIntToTokens(token.balance, token.configuration.decimals)}
-        //   </AccentText>
-        // ),
-      })
-    );
+    return [collateral, ...Object.keys(oracles)].map((label: string) => ({
+      key: label,
+      label: label,
+      leftElement: IMAGES_EXIST ? (
+        <img key={label} width="20px" src={logoUrl(label)} alt={label} />
+      ) : (
+        <UnknownToken key={label} size="20px" />
+      ),
+      // rightElement: (
+      //   <AccentText key={label} size="xs">
+      //     {bigIntToTokens(token.balance, token.configuration.decimals)}
+      //   </AccentText>
+      // ),
+    }));
   }, [oracles]);
 
   // Token input values
@@ -123,8 +130,8 @@ export const Pools = () => {
       (!inputToken || !amountIn || !outputToken || !amountOut));
 
   const getMint = (symbol: string) => {
-    if (symbol === client.config.collateralSymbol) {
-      return translateAddress(client.config.collateralMint);
+    if (symbol === collateral) {
+      return translateAddress(collateralConfiguration.mint);
     } else {
       return syntheticMintPDA(
         client.programId,
@@ -153,12 +160,7 @@ export const Pools = () => {
   const resetSwapData = () => {
     setAmountToken1("");
     setAmountToken2("");
-    setMints(
-      getMint(client.config.collateralSymbol),
-      client.config.collateralSymbol,
-      getMint("nSOL"),
-      "nSOL"
-    );
+    setMints(getMint(collateral), collateral, getMint("nSOL"), "nSOL");
   };
 
   // Submit swap transaction

@@ -2,20 +2,23 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import {
   Context,
-  Oracle,
+  OracleConfig,
   ResynthClient,
   syntheticMintPDA,
+  TokenConfig,
   TokenSwapClient,
 } from "@resynth/resynth-sdk";
 import { useNetwork } from "./NetworkProvider";
 import { assert } from "../utils/errors";
 import { PublicKey } from "@solana/web3.js";
-import { translateAddress } from "@coral-xyz/anchor";
 
 /** Accounts of interest to the UI */
 interface Accounts {
   oracle: string;
-  oracleConfiguration: Oracle;
+  oracleConfiguration: OracleConfig;
+  collateral: string;
+  collateralConfiguration: TokenConfig;
+
   mint1: PublicKey;
   mint2: PublicKey;
   symbol1: string;
@@ -31,7 +34,12 @@ const defaultAccounts: Accounts = {
     base: "USD",
     quote: "SOL",
   },
-  mint1: translateAddress(ResynthClient.config.collateralMint),
+  collateral: "USDC",
+  collateralConfiguration: {
+    mint: new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"),
+    decimals: 6,
+  },
+  mint1: new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"),
   symbol1: "USDC",
   mint2: syntheticMintPDA(
     new PublicKey(ResynthClient.config.resynthProgramId),
@@ -45,7 +53,9 @@ const ResynthContext = createContext<{
   tokenSwap: TokenSwapClient;
   isClientLoading: boolean;
   oracle: string;
-  oracleConfiguration: Oracle;
+  oracleConfiguration: OracleConfig;
+  collateral: string;
+  collateralConfiguration: TokenConfig;
   mint1: PublicKey;
   mint2: PublicKey;
   symbol1: string;
@@ -63,6 +73,8 @@ const ResynthContext = createContext<{
   isClientLoading: false,
   oracle: defaultAccounts.oracle,
   oracleConfiguration: defaultAccounts.oracleConfiguration,
+  collateral: defaultAccounts.collateral,
+  collateralConfiguration: defaultAccounts.collateralConfiguration,
   mint1: defaultAccounts.mint1,
   mint2: defaultAccounts.mint2,
   symbol1: defaultAccounts.symbol1,
@@ -88,19 +100,23 @@ export const ResynthProvider = ({
   });
   const [accounts, setAccounts] = useState<Accounts>(defaultAccounts);
 
+  // FIXME! Allow updating collateral in the same way as the oracle
   function updateOracle(oracle: string) {
     const oracles = client.config.oracles;
     assert(oracles);
     const oracleConfiguration = oracles[oracle];
     assert(oracleConfiguration);
 
-    const collateralMint = new PublicKey(client.config.collateralMint);
     const syntheticMint = syntheticMintPDA(
       client.programId,
       oracleConfiguration.oracle
     );
+    const syntheticSymbol = oracleConfiguration.quote;
 
     setAccounts((accounts) => {
+      const collateralMint = defaultAccounts.mint1;
+      const collateralSymbol = defaultAccounts.symbol1;
+
       let mint1: PublicKey;
       let symbol1: string;
       let mint2: PublicKey;
@@ -110,22 +126,25 @@ export const ResynthProvider = ({
         mint2 = accounts.mint2;
         symbol2 = accounts.symbol2;
         mint1 = syntheticMint;
-        symbol1 = oracleConfiguration.quote;
+        symbol1 = syntheticSymbol;
       } else if (accounts.mint1.equals(collateralMint)) {
         mint1 = accounts.mint1;
         symbol1 = accounts.symbol1;
         mint2 = syntheticMint;
-        symbol2 = oracleConfiguration.quote;
+        symbol2 = syntheticSymbol;
       } else {
         mint1 = collateralMint;
-        symbol1 = client.config.collateralSymbol;
+        symbol1 = collateralSymbol;
         mint2 = syntheticMint;
-        symbol2 = oracleConfiguration.quote;
+        symbol2 = syntheticSymbol;
       }
 
       return {
         oracle,
         oracleConfiguration,
+        collateral: accounts.collateral,
+        collateralConfiguration: accounts.collateralConfiguration,
+
         mint1,
         symbol1,
         mint2,
@@ -144,6 +163,9 @@ export const ResynthProvider = ({
       return {
         oracle: accounts.oracle,
         oracleConfiguration: accounts.oracleConfiguration,
+        collateral: accounts.collateral,
+        collateralConfiguration: accounts.collateralConfiguration,
+
         mint1,
         symbol1,
         mint2,
@@ -176,6 +198,8 @@ export const ResynthProvider = ({
         isClientLoading,
         oracle: accounts.oracle,
         oracleConfiguration: accounts.oracleConfiguration,
+        collateral: accounts.collateral,
+        collateralConfiguration: accounts.collateralConfiguration,
         mint1: accounts.mint1,
         mint2: accounts.mint2,
         symbol1: accounts.symbol1,

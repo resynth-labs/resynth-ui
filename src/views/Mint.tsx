@@ -13,6 +13,7 @@ import { assert } from "../utils/errors";
 import { getMintSyntheticAssetTransaction } from "../actions/mintSyntheticAsset";
 import { SwapBuilder } from "../components/SwapBuilder/SwapBuilder";
 import { sendTransaction } from "../actions/sendTransaction";
+import { BN, translateAddress } from "@coral-xyz/anchor";
 
 function logoUrl(oracle: string) {
   return `/img/tokens/${oracle}.png`;
@@ -27,7 +28,14 @@ export const Mint = () => {
   const { connection } = useConnection();
   const wallet = useWallet();
   const { setIsWalletModalOpen } = useModals();
-  const { client, isClientLoading, oracle, setOracle } = useResynth();
+  const {
+    client,
+    isClientLoading,
+    oracle,
+    collateral,
+    collateralConfiguration,
+    setOracle,
+  } = useResynth();
   const collateralBalance = useCollateralBalance();
   const syntheticBalance = useSynthBalance();
   const [isSendingTx, setIsSendingTx] = useState(false);
@@ -38,17 +46,17 @@ export const Mint = () => {
   // Collateral input value
   const collateralValue = useMemo(
     () => ({
-      key: client.config.collateralSymbol,
-      label: client.config.collateralSymbol,
+      key: collateral,
+      label: collateral,
       leftElement: IMAGES_EXIST ? (
         <img
-          key={client.config.collateralSymbol}
+          key={collateral}
           width="20px"
-          src={logoUrl(client.config.collateralSymbol)}
-          alt={client.config.collateralSymbol}
+          src={logoUrl(collateral)}
+          alt={collateral}
         />
       ) : (
-        <UnknownToken key={client.config.collateralSymbol} size="20px" />
+        <UnknownToken key={collateral} size="20px" />
       ),
       // rightElement: (
       //   <AccentText key={label} size="xs">
@@ -193,10 +201,11 @@ export const Mint = () => {
     try {
       const { transaction, lastValidBlockHeight } =
         await getMintSyntheticAssetTransaction(
-          swapType === "mint",
+          swapType,
           client,
           oracle,
-          +amountCollateral,
+          translateAddress(collateralConfiguration.mint),
+          new BN(+amountCollateral * 10 ** collateralConfiguration.decimals),
           +amountSynthetic,
           collateralBalance.balanceAddress,
           syntheticBalance.balanceAddress

@@ -41,13 +41,12 @@ const errorBalance: UserBalance = {
 };
 
 export const useCollateralBalance = () => {
-  const { client } = useResynth();
-  const mint = client.config.collateralMint;
-  return useBalance(mint);
+  const { client, collateralConfiguration } = useResynth();
+  return useBalance(collateralConfiguration.mint);
 };
 
 export const useSynthBalance = () => {
-  const { client, oracle, oracleConfiguration } = useResynth();
+  const { client, oracleConfiguration } = useResynth();
   const { syntheticMint } = syntheticAssetPDA(
     client.programId,
     translateAddress(oracleConfiguration.oracle)

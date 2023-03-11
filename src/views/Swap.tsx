@@ -60,6 +60,8 @@ export const Swap = () => {
     client,
     isClientLoading,
     oracle,
+    collateral,
+    collateralConfiguration,
     mint1,
     symbol1,
     mint2,
@@ -90,20 +92,17 @@ export const Swap = () => {
         balance: 0,
         configuration: {
           // FIXME: support other tokens
-          mint: translateAddress(client.config.collateralMint),
+          mint: translateAddress(collateralConfiguration.mint),
           symbol: symbol,
           logoUrl: undefined,
-          decimals: client.config.collateralDecimals,
+          decimals: collateralConfiguration.decimals,
         },
       };
     }
   }
 
   const tokens = useMemo(
-    () =>
-      [client.config.collateralSymbol, ...Object.keys(oracles)].map(
-        symbolToToken
-      ),
+    () => [collateral, ...Object.keys(oracles)].map(symbolToToken),
     [oracles]
   );
 
