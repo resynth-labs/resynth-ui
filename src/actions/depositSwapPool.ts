@@ -12,6 +12,7 @@ import { assert } from "../utils/errors";
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   createApproveInstruction,
+  createAssociatedTokenAccountInstruction,
   getAssociatedTokenAddressSync,
   unpackAccount,
   unpackMint,
@@ -109,13 +110,25 @@ export const getDepositSwapPoolTransaction = async (
   assert(mintA.equals(mintA));
   assert(mintB.equals(mintB));
 
-  const lptoken = getAssociatedTokenAddressSync(lpmint, walletPubkey);
-
   const transaction = new Transaction({
     blockhash,
     lastValidBlockHeight,
     feePayer: walletPubkey,
   });
+
+  const lptoken = getAssociatedTokenAddressSync(lpmint, walletPubkey);
+
+  // fixme: Don't await while building transaction
+  if (!(await connection.getAccountInfo(lptoken))) {
+    transaction.add(
+      createAssociatedTokenAccountInstruction(
+        walletPubkey,
+        lptoken,
+        walletPubkey,
+        lpmint
+      )
+    );
+  }
 
   const minimumPoolTokenAmountA = tradingTokensToPoolTokens(
     swapPoolData,
