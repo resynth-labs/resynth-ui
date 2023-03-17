@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ResynthConfig } from "@resynth/resynth-sdk";
+import { ResynthClient } from "@resynth/resynth-sdk";
 import { useThemeMode } from "../../../contexts/ThemeModeProvider";
 
 interface CarouselItemProps {
@@ -68,7 +68,7 @@ export const SkewedCarousel = ({ skewed, onClick }: SkewedCarouselProps) => {
   }, [skewed]);
 
   const shuffledOracles = useMemo(() => {
-    const entries = Object.entries(ResynthConfig.mainnet.oracles);
+    const entries = Object.entries(ResynthClient.config.oracles);
     const newArr = [];
     while (entries.length) {
       // Grab random entries
@@ -77,7 +77,7 @@ export const SkewedCarousel = ({ skewed, onClick }: SkewedCarouselProps) => {
       newArr.push(element);
     }
     return newArr;
-  }, [ResynthConfig]);
+  }, []);
 
   const synths = useMemo(() => {
     const newArr: JSX.Element[] = [];

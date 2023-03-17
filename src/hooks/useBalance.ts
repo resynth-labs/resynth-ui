@@ -159,7 +159,7 @@ async function getTokenBalance(
   //get token balance
   const [infos, { decimals }] = await Promise.all([
     connection.getTokenAccountsByOwner(publicKey, {
-      mint: mint,
+      mint,
     }),
     getMint(connection, mint),
   ]);

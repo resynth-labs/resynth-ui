@@ -15,11 +15,9 @@ import { translateAddress } from "@coral-xyz/anchor";
 import { syntheticMintPDA } from "@resynth/resynth-sdk";
 import { AccentText } from "../components/Typography";
 import { Transaction } from "@solana/web3.js";
-import {
-  getDepositSwapPoolTransaction,
-  getInitializeSwapPoolTransaction,
-} from "../actions/depositSwapPool";
+import { getDepositSwapPoolTransaction } from "../actions/depositSwapPool";
 import { sendTransaction } from "../actions/sendTransaction";
+import { getInitializeSwapPoolTransaction } from "../actions/initializeSwapPool";
 
 function logoUrl(oracle: string) {
   return `/img/tokens/${oracle}.png`;
