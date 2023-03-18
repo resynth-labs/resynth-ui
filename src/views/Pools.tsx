@@ -91,8 +91,8 @@ export const Pools = () => {
   const inputTokenLabel = "Input collateral";
   const outputTokenLabel = "Input Synthetic";
 
-  const inputLabel = "Collateral deposit";
-  const outputLabel = "Synthetic deposit";
+  const inputLabel = "Collateral";
+  const outputLabel = "Synthetic";
 
   const inputTokenOptions = tokenOptions;
   const outputTokenOptions = tokenOptions;
@@ -106,8 +106,19 @@ export const Pools = () => {
   const amountIn = amountToken1;
   const amountOut = amountToken2;
 
-  const maxAmountIn = inputBalance.balance;
-  const maxAmountOut = outputBalance.balance;
+  const maxAmountIn =
+    wallet.connected && !inputBalance.isLoadingBalance
+      ? inputBalance.balance
+      : +amountIn;
+  const maxAmountOut =
+    wallet.connected && !outputBalance.isLoadingBalance
+      ? outputBalance.balance
+      : +amountOut;
+
+  const balanceInLabel =
+    +amountIn === maxAmountIn ? undefined : inputBalance.balanceString;
+  const balanceOutLabel =
+    +amountOut === maxAmountOut ? undefined : outputBalance.balanceString;
 
   const inputTokenDisabled = isSendingTx || isClientLoading;
   const outputTokenDisabled = isSendingTx || isClientLoading;
@@ -251,6 +262,7 @@ export const Pools = () => {
       setInputToken={setInputToken}
       inputTokenDisabled={inputTokenDisabled}
       inputLabel={inputLabel}
+      balanceInLabel={balanceInLabel}
       amountIn={amountIn}
       maxAmountIn={maxAmountIn}
       setAmountIn={setAmountIn}
@@ -262,6 +274,7 @@ export const Pools = () => {
       setOutputToken={setOutputToken}
       outputTokenDisabled={outputTokenDisabled}
       outputLabel={outputLabel}
+      balanceOutLabel={balanceOutLabel}
       amountOut={amountOut}
       maxAmountOut={maxAmountOut}
       setAmountOut={setAmountOut}

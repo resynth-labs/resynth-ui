@@ -22,6 +22,7 @@ export interface SwapBuilderProps {
   setInputToken: (label: string) => void;
   inputTokenDisabled: boolean;
   inputLabel: string;
+  balanceInLabel?: string;
   amountIn: string;
   maxAmountIn: number;
   setAmountIn: (amount: string) => void;
@@ -34,6 +35,7 @@ export interface SwapBuilderProps {
   setOutputToken: (label: string) => void;
   outputTokenDisabled: boolean;
   outputLabel: string;
+  balanceOutLabel?: string;
   amountOut: string;
   maxAmountOut: number;
   setAmountOut: (amount: string) => void;
@@ -61,6 +63,7 @@ export const SwapBuilder = ({
   setInputToken,
   inputTokenDisabled,
   inputLabel,
+  balanceInLabel,
   amountIn,
   maxAmountIn,
   setAmountIn,
@@ -73,6 +76,7 @@ export const SwapBuilder = ({
   setOutputToken,
   outputTokenDisabled,
   outputLabel,
+  balanceOutLabel,
   amountOut,
   maxAmountOut,
   setAmountOut,
@@ -120,6 +124,7 @@ export const SwapBuilder = ({
             label={inputLabel}
             value={amountIn}
             max={maxAmountIn}
+            balanceLabel={balanceInLabel}
             maxButton={{
               isActive: !!amountIn && Number(amountIn) === maxAmountIn,
               onClick: () => setAmountIn(maxAmountIn.toString()),
@@ -168,6 +173,7 @@ export const SwapBuilder = ({
             label={outputLabel}
             value={amountOut}
             max={maxAmountOut}
+            balanceLabel={balanceOutLabel}
             maxButton={{
               isActive: !!amountOut && Number(amountOut) === maxAmountOut,
               onClick: () => setAmountOut(maxAmountOut.toString()),

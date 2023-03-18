@@ -15,31 +15,34 @@ import { syntheticAssetPDA, SYNTH_DECIMALS } from "@resynth/resynth-sdk";
 
 export interface UserBalance {
   balance: number;
+  balanceString: string | undefined;
   balanceAddress: PublicKey;
   decimals: number;
   exists: boolean;
   isLoadingBalance: boolean;
-  isError: boolean;
+  isLoadingError: boolean;
   getBalance: () => Promise<void>;
 }
 
 const loadingBalance: UserBalance = {
   balance: 0,
+  balanceString: undefined,
   balanceAddress: PublicKey.default,
   decimals: 0,
   exists: false,
   isLoadingBalance: true,
-  isError: false,
+  isLoadingError: false,
   getBalance: async () => {},
 };
 
 const errorBalance: UserBalance = {
   balance: 0,
+  balanceString: undefined,
   balanceAddress: PublicKey.default,
   decimals: 0,
   exists: false,
   isLoadingBalance: false,
-  isError: true,
+  isLoadingError: true,
   getBalance: async () => {},
 };
 
@@ -134,14 +137,19 @@ async function getNativeBalance(
     await connection.getMultipleAccountsInfo([publicKey, balanceAddress]);
 
   const decimals = 9;
+  const balance = (walletState?.lamports ?? 0) / 10 ** decimals;
+  const balanceString = `Balance: ${balance.toLocaleString("fullwide", {
+    maximumFractionDigits: 1,
+  })}`;
 
   return {
-    balance: (walletState?.lamports ?? 0) / 10 ** decimals,
+    balance,
+    balanceString,
     balanceAddress,
     decimals,
     exists: !!wrappedSolState,
     isLoadingBalance: false,
-    isError: false,
+    isLoadingError: false,
     getBalance,
   };
 }
@@ -184,13 +192,19 @@ async function getTokenBalance(
     );
   }
 
+  const balance = Number(highestBalance) / 10 ** decimals;
+  const balanceString = `Balance: ${balance.toLocaleString("fullwide", {
+    maximumFractionDigits: 1,
+  })}`;
+
   return {
-    balance: Number(highestBalance) / 10 ** decimals,
+    balance,
+    balanceString,
     balanceAddress: highestAddress,
     decimals,
     exists,
     isLoadingBalance: false,
-    isError: false,
+    isLoadingError: false,
     getBalance,
   };
 }

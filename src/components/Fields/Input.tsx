@@ -4,11 +4,13 @@ import { color, spacing } from "../../styles/mixins";
 import { Button } from "../Buttons";
 import { FieldProps, FieldContainer, FieldLabel } from ".";
 import { BodyText } from "../Typography";
+import { Flexbox } from "../Layout";
 
 interface InputProps extends Omit<FieldProps, "value" | "onChange"> {
   value: string;
   type?: "text" | "number";
   max?: number;
+  balanceLabel?: string;
   maxButton?: {
     isActive?: boolean;
     onClick: () => void;
@@ -32,9 +34,11 @@ const StyledInput = styled.input`
 
 const MaxButton = styled(Button)<{ isActive?: boolean }>`
   position: absolute;
-  top: 50%;
+  transform: translateY(
+    ${({ isActive }) => (!isActive ? "-92%" : "-50%")}
+  ) !important;
+  top: ${({ isActive }) => (!isActive ? "92%" : "50%")};
   right: ${spacing()};
-  transform: translateY(-50%) !important;
   padding: ${spacing("xs")} ${spacing("sm")} calc(${spacing("xs")} - 1px)
     ${spacing("sm")};
   color: ${({ isActive }) => (isActive ? color("base") : color("accent"))};
@@ -58,6 +62,7 @@ const MaxButton = styled(Button)<{ isActive?: boolean }>`
 export const Input = ({
   type,
   max,
+  balanceLabel,
   maxButton,
   value,
   label,
@@ -73,7 +78,10 @@ export const Input = ({
     error={!!fieldProps.error}
     disabled={disabled}
   >
-    {!!label && <FieldLabel>{label}</FieldLabel>}
+    <Flexbox justifyContent="space-between" width={"100%"}>
+      {!!label && <FieldLabel>{label}</FieldLabel>}
+      {!!balanceLabel && <FieldLabel>{balanceLabel}</FieldLabel>}
+    </Flexbox>
     <StyledInput
       value={value?.toString()}
       placeholder={placeholder}
