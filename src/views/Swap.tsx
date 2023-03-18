@@ -279,6 +279,7 @@ export const Swap = () => {
   // Submit swap transaction
   const submitSwap = async () => {
     if (!wallet.publicKey || !wallet.signTransaction) {
+      setIsWalletModalOpen(true);
       return;
     }
     setIsSendingTx(true);
