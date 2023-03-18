@@ -131,7 +131,6 @@ export const getDepositSwapPoolTransaction = async (
       minimumPoolTokenAmount: new BN(minimumPoolTokenAmountA),
       swapPool,
       authority,
-      owner: walletPubkey,
       userTransferAuthority: userTransferAuthorityA.publicKey,
       tokenA,
       tokenB: null,
@@ -139,8 +138,6 @@ export const getDepositSwapPoolTransaction = async (
       vaultB,
       lpmint,
       lptoken,
-      mintA,
-      mintB,
     })
   );
 
@@ -165,7 +162,6 @@ export const getDepositSwapPoolTransaction = async (
       minimumPoolTokenAmount: new BN(minimumPoolTokenAmountB),
       swapPool,
       authority,
-      owner: walletPubkey,
       userTransferAuthority: userTransferAuthorityB.publicKey,
       tokenA: null,
       tokenB,
@@ -173,8 +169,6 @@ export const getDepositSwapPoolTransaction = async (
       vaultB,
       lpmint,
       lptoken,
-      mintA,
-      mintB,
     })
   );
 

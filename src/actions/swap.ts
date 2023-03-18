@@ -76,7 +76,6 @@ export async function getSwapTransaction(
       minimumAmountOut: new BN(minimumToLamports),
       swapPool,
       authority,
-      owner: walletPubkey,
       userTransferAuthority: userTransferAuthority.publicKey,
       sourceTokenAccount: source,
       sourceVault,
