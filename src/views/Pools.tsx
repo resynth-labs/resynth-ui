@@ -106,14 +106,12 @@ export const Pools = () => {
   const amountIn = amountToken1;
   const amountOut = amountToken2;
 
-  const maxAmountIn =
-    wallet.connected && !inputBalance.isLoadingBalance
-      ? inputBalance.balance
-      : +amountIn;
-  const maxAmountOut =
-    wallet.connected && !outputBalance.isLoadingBalance
-      ? outputBalance.balance
-      : +amountOut;
+  const maxAmountIn = !inputBalance.isLoadingBalance
+    ? inputBalance.balance
+    : +amountIn;
+  const maxAmountOut = !outputBalance.isLoadingBalance
+    ? outputBalance.balance
+    : +amountOut;
 
   const balanceInLabel =
     +amountIn === maxAmountIn ? undefined : inputBalance.balanceString;
