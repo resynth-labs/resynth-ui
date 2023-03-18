@@ -40,7 +40,7 @@ export const Mint = () => {
   const syntheticBalance = useSynthBalance();
   const [isSendingTx, setIsSendingTx] = useState(false);
   const [wasTxError, setWasTxError] = useState(false);
-  const oracles = client.config.oracles;
+  const { oracles } = client.config;
   assert(oracles);
 
   // Collateral input value
@@ -128,7 +128,9 @@ export const Mint = () => {
     ? collateralBalance.balance
     : +amountIn;
   // FIXME: use margin accounting to find max amount
-  const maxAmountOut = Number.MAX_SAFE_INTEGER;
+  const maxAmountOut = !syntheticBalance.isLoadingBalance
+    ? Number.MAX_SAFE_INTEGER
+    : +amountOut;
 
   const balanceInLabel =
     +amountIn === maxAmountIn ? undefined : collateralBalance.balanceString;

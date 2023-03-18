@@ -9,12 +9,9 @@ import { notify } from "../utils/notify";
 import { color } from "../styles/mixins";
 import { Flexbox, Spacer } from "../components/Layout";
 import { AccentText, BodyText } from "../components/Typography";
-import { Input, Select, SelectOption } from "../components/Fields";
-import { Button, PrimaryButton } from "../components/Buttons";
-import { ExternalLink, SwapArrows, UnknownToken } from "../components/Icons";
+import { Button } from "../components/Buttons";
+import { ExternalLink, UnknownToken } from "../components/Icons";
 import { PublicKey } from "@solana/web3.js";
-import { SwapContainer } from "../components/Containers/Swap/SwapContainer";
-import { Disclaimer } from "../components/Disclaimer/Disclaimer";
 import { useBalance } from "../hooks/useBalance";
 import { assert } from "../utils/errors";
 import { syntheticMintPDA, SYNTH_DECIMALS } from "@resynth/resynth-sdk";
@@ -23,6 +20,7 @@ import { getSwapTransaction } from "../actions/swap";
 import { sendTransaction } from "../actions/sendTransaction";
 import { useCachedBlockhash } from "../hooks/useCachedBlockhash";
 import { useSwapPool } from "../hooks/useSwapPool";
+import { SwapBuilder } from "../components/SwapBuilder/SwapBuilder";
 
 const SlippageButton = styled(Button)<{ isActive: boolean }>`
   width: 75px;
@@ -65,7 +63,6 @@ export const Swap = () => {
     isClientLoading,
     oracle,
     collateral,
-    collateralConfiguration,
     mint1,
     symbol1,
     mint2,
@@ -78,12 +75,12 @@ export const Swap = () => {
   const getBlockhash = useCachedBlockhash();
   const [isSendingTx, setIsSendingTx] = useState(false);
   const [wasTxError, setWasTxError] = useState(false);
-  const oracles = client.config.oracles;
+  const { oracles, tokens } = client.config;
   assert(oracles);
 
   function symbolToToken(symbol: string): Token {
-    const oracle = oracles![symbol];
-    if (oracle) {
+    if (symbol in oracles) {
+      const oracle = oracles[symbol];
       return {
         balance: 0,
         configuration: {
@@ -94,20 +91,21 @@ export const Swap = () => {
         },
       };
     } else {
+      assert(symbol in tokens);
+      const token = tokens[symbol];
       return {
         balance: 0,
         configuration: {
-          // FIXME: support other tokens
-          mint: translateAddress(collateralConfiguration.mint),
+          mint: translateAddress(token.mint),
           symbol: symbol,
           logoUrl: undefined,
-          decimals: collateralConfiguration.decimals,
+          decimals: token.decimals,
         },
       };
     }
   }
 
-  const tokens = useMemo(
+  const tokensItems = useMemo(
     () => [collateral, ...Object.keys(oracles)].map(symbolToToken),
     [oracles]
   );
@@ -115,7 +113,7 @@ export const Swap = () => {
   // Token options / input & output tokens
   const tokenOptions = useMemo(
     () =>
-      tokens.map((token: Token) => ({
+      tokensItems.map((token: Token) => ({
         key: token.configuration.mint.toBase58(),
         label: token.configuration.symbol,
         leftElement: token.configuration.logoUrl ? (
@@ -134,17 +132,30 @@ export const Swap = () => {
           </AccentText>
         ),
       })),
-    [tokens]
+    [tokensItems]
   );
 
-  const inputToken = tokens.find((token) =>
-    token.configuration.mint.equals(mint1)
-  );
-  const outputToken = tokens.find((token) =>
-    token.configuration.mint.equals(mint2)
-  );
-  assert(inputToken);
-  assert(outputToken);
+  const inputToken = useMemo(() => {
+    const inputToken = tokensItems.find((token) =>
+      token.configuration.mint.equals(mint1)
+    );
+    assert(inputToken);
+    return inputToken;
+  }, [tokensItems, mint1.toBase58()]);
+  const outputToken = useMemo(() => {
+    const outputToken = tokensItems.find((token) =>
+      token.configuration.mint.equals(mint2)
+    );
+    assert(outputToken);
+    return outputToken;
+  }, [tokensItems, mint2.toBase58()]);
+
+  const inputValue = tokenOptions.filter(
+    (option: any) => option.key === inputToken?.configuration.mint.toBase58()
+  )[0];
+  const outputValue = tokenOptions.filter(
+    (option: any) => option.key === outputToken?.configuration.mint.toBase58()
+  )[0];
 
   // Swap type and amounts in/out
   // const [swapType, setSwapType] = useState<"exactIn" | "exactOut">("exactIn");
@@ -152,62 +163,12 @@ export const Swap = () => {
   const [amountIn, setAmountIn] = useState("0");
   const [amountOut, setAmountOut] = useState("0");
 
-  function setInputToken(token: SelectOption) {
-    setMints(new PublicKey(token.key), token.label, mint2, symbol2);
-  }
-  function setOutputToken(token: SelectOption) {
-    setMints(mint1, symbol1, new PublicKey(token.key), token.label);
-  }
-
-  function setInputAmount(amount: string) {
-    setAmountIn(amount);
-
-    const mint = translateAddress(mint1);
-    if (swapPool) {
-      const inputDecimals = mint.equals(swapPool.mintA)
-        ? swapPool.mintADecimals
-        : swapPool.mintBDecimals;
-      const outputDecimals = mint.equals(swapPool.mintA)
-        ? swapPool.mintBDecimals
-        : swapPool.mintADecimals;
-      const inputAmount = new BN(+amount * 10 ** inputDecimals);
-      const result = swapWithoutFees(inputAmount, mint);
-      if (result) {
-        let outputAmount =
-          result.destinationAmountSwapped.toNumber() / 10 ** outputDecimals;
-        if (slippage) {
-          const slippageCoefficient = 1 - slippage;
-          outputAmount *= slippageCoefficient;
-        }
-        setOutputAmount(
-          outputAmount.toLocaleString("fullwide", {
-            useGrouping: false,
-          })
-        );
-      }
-    }
-    // setSwapType("exactIn");
-  }
-  function setOutputAmount(amount: string) {
-    setAmountOut(amount);
-    // setSwapType("exactOut");
-  }
-
-  function switchTokens() {
-    assert(inputToken);
-    assert(outputToken);
-    setMints(
-      outputToken.configuration.mint,
-      outputToken.configuration.symbol,
-      inputToken.configuration.mint,
-      inputToken.configuration.symbol
-    );
-    setAmountIn(amountOut);
-    setAmountOut(amountIn);
-  }
+  const inputTokenLabel = "Input token";
+  const outputTokenLabel = "Output token";
 
   // Maximum amounts in/out
-  const maxAmountIn = inputToken?.balance ?? 0;
+  const maxAmountIn = inputBalance.balance;
+  // FIXME: use swap accounting to find max amount. Also a price impact warning like uni v3
   /*
   const maxAmountOut =
     market && inputToken && outputToken
@@ -222,7 +183,83 @@ export const Swap = () => {
         )
       : 0;
   */
-  const maxAmountOut = 0;
+  const maxAmountOut = getAmountOut(inputBalance.balance.toString()) ?? 0;
+
+  const balanceInLabel =
+    +amountIn === maxAmountIn ? undefined : inputBalance.balanceString;
+  const balanceOutLabel =
+    +amountOut === maxAmountOut ? undefined : outputBalance.balanceString;
+
+  const inputLabel = "Amount in";
+  const outputLabel = "Amount out";
+
+  const inputTokenDisabled = !inputToken || isSendingTx || isClientLoading;
+  const outputTokenDisabled = !outputToken || isSendingTx || isClientLoading;
+
+  const inputDisabled = !inputToken || isSendingTx || isClientLoading;
+  const outputDisabled = !outputToken || isSendingTx || isClientLoading;
+
+  const submitLabel = wallet.connected
+    ? isSendingTx
+      ? "Swapping..."
+      : "Swap"
+    : "Connect wallet";
+  const switchInputOutputDisabled = isSendingTx || !inputToken || !outputToken;
+  const submitDisabled =
+    isClientLoading ||
+    isSendingTx ||
+    (wallet.connected &&
+      (!inputToken || !amountIn || !outputToken || !amountOut));
+
+  function setInputToken(token: string) {
+    setMints(token, symbol2);
+  }
+  function setOutputToken(token: string) {
+    setMints(symbol1, token);
+  }
+
+  function setInputAmount(amount: string) {
+    setAmountIn(amount);
+
+    const outputAmount = getAmountOut(amount);
+    if (outputAmount) {
+      setAmountOut(
+        outputAmount.toLocaleString("fullwide", {
+          useGrouping: false,
+        })
+      );
+    }
+  }
+
+  function setOutputAmount(amount: string) {
+    setAmountOut(amount);
+  }
+
+  function getAmountOut(amount: string) {
+    if (!swapPool) {
+      return;
+    }
+
+    const mint = translateAddress(mint1);
+    const inputDecimals = mint.equals(swapPool.mintA)
+      ? swapPool.mintADecimals
+      : swapPool.mintBDecimals;
+    const outputDecimals = mint.equals(swapPool.mintA)
+      ? swapPool.mintBDecimals
+      : swapPool.mintADecimals;
+    const inputAmount = new BN(+amount * 10 ** inputDecimals);
+    const result = swapWithoutFees(inputAmount, mint);
+    if (!result) {
+      return;
+    }
+    let outputAmount =
+      result.destinationAmountSwapped.toNumber() / 10 ** outputDecimals;
+    if (slippage !== undefined) {
+      const slippageCoefficient = 1 - slippage;
+      outputAmount *= slippageCoefficient;
+    }
+    return outputAmount;
+  }
 
   // Reset all swap data
   const resetSwapData = () => {
@@ -231,13 +268,17 @@ export const Swap = () => {
     setAmountOut("");
   };
 
+  function switchInputOutput() {
+    setMints(outputToken.configuration.symbol, inputToken.configuration.symbol);
+    setAmountIn(amountOut);
+    setAmountOut(amountIn);
+  }
+
   // Submit swap transaction
   const submitSwap = async () => {
     if (!wallet.publicKey || !wallet.signTransaction) {
       return;
     }
-    assert(inputToken);
-    assert(outputToken);
     setIsSendingTx(true);
     const notificationId = notify({
       content: "Sending transaction...",
@@ -334,166 +375,71 @@ export const Swap = () => {
     setWasTxError(false);
   }, [amountIn, amountOut]);
 
+  const slippageElement = (
+    <Flexbox width="95%" flexColumn marginY="xl">
+      <AccentText>Slippage</AccentText>
+      <Spacer />
+      <Flexbox width="100%" alignItems="center" justifyContent="space-between">
+        {[0.001, 0.005, 0.0075, 0.01].map((slipPercentage) => (
+          <SlippageButton
+            onClick={() => setSlippage(slipPercentage)}
+            isActive={slippage === slipPercentage}
+            key={slipPercentage}
+          >
+            <BodyText size="xs" weight="bold">
+              {slipPercentage * 100}%
+            </BodyText>
+          </SlippageButton>
+        ))}
+        <SlippageButton
+          onClick={() => setSlippage(undefined)}
+          isActive={slippage === undefined}
+        >
+          <BodyText size="lg" weight="bold">
+            ∞
+          </BodyText>
+        </SlippageButton>
+      </Flexbox>
+    </Flexbox>
+  );
+
   return (
-    <>
-      <Disclaimer />
-      <SwapContainer width="95%" alignItems="center" flexColumn>
-        {/** INPUT DATA **/}
-        <Flexbox
-          width="100%"
-          justifyContent="space-between"
-          alignItems="center"
-        >
-          <Select
-            width="40%"
-            label="Input token"
-            value={
-              tokenOptions.filter(
-                (option: any) =>
-                  option.key === inputToken?.configuration.mint.toBase58()
-              )[0]
-            }
-            options={tokenOptions}
-            noOptionsMessage="No input tokens for this market"
-            onChange={setInputToken}
-            needsValue={wallet.connected && !inputToken}
-            error={wasTxError}
-            disabled={isSendingTx || isClientLoading}
-          />
-          <Input
-            width="57.5%"
-            type="number"
-            label="Amount in"
-            value={amountIn}
-            max={maxAmountIn}
-            maxButton={{
-              isActive: !!amountIn && Number(amountIn) === maxAmountIn,
-              onClick: () =>
-                setInputAmount(
-                  maxAmountIn.toLocaleString("fullwide", { useGrouping: false })
-                ),
-            }}
-            onChange={setInputAmount}
-            needsValue={inputToken && !amountIn}
-            error={wasTxError}
-            disabled={!inputToken || isSendingTx || isClientLoading}
-          />
-        </Flexbox>
-
-        {/** SWITCH DATA **/}
-        <Flexbox marginY="base">
-          <Button
-            onClick={switchTokens}
-            disabled={isSendingTx || !inputToken || !outputToken}
-          >
-            <SwapArrows size={theme.font.size.lg} />
-          </Button>
-        </Flexbox>
-
-        {/** OUTPUT DATA **/}
-        <Flexbox
-          width="100%"
-          justifyContent="space-between"
-          alignItems="center"
-        >
-          <Select
-            width="40%"
-            label="Output token"
-            value={
-              tokenOptions.filter(
-                (option: any) =>
-                  option.key === outputToken?.configuration.mint.toBase58()
-              )[0]
-            }
-            options={tokenOptions}
-            noOptionsMessage="No output tokens for this market"
-            onChange={setOutputToken}
-            needsValue={wallet.connected && !inputToken}
-            error={wasTxError}
-            disabled={isSendingTx || isClientLoading}
-          />
-          <Input
-            width="57.5%"
-            type="number"
-            label="Amount out"
-            value={amountOut}
-            max={maxAmountOut}
-            maxButton={{
-              isActive: !!amountOut && Number(amountOut) === maxAmountOut,
-              onClick: () =>
-                setOutputAmount(
-                  maxAmountOut.toLocaleString("fullwide", {
-                    useGrouping: false,
-                  })
-                ),
-            }}
-            onChange={setOutputAmount}
-            needsValue={outputToken && !amountOut}
-            error={wasTxError}
-            disabled={!outputToken || isSendingTx || isClientLoading}
-          />
-        </Flexbox>
-
-        {/** SLIPPAGE **/}
-        <Flexbox width="95%" flexColumn marginY="xl">
-          <AccentText>Slippage</AccentText>
-          <Spacer />
-          <Flexbox
-            width="100%"
-            alignItems="center"
-            justifyContent="space-between"
-          >
-            {[0.001, 0.005, 0.0075, 0.01].map((slipPercentage) => (
-              <SlippageButton
-                onClick={() => setSlippage(slipPercentage)}
-                isActive={slippage === slipPercentage}
-                key={slipPercentage}
-              >
-                <BodyText size="xs" weight="bold">
-                  {slipPercentage * 100}%
-                </BodyText>
-              </SlippageButton>
-            ))}
-            <SlippageButton
-              onClick={() => setSlippage(undefined)}
-              isActive={slippage === undefined}
-            >
-              <BodyText size="lg" weight="bold">
-                ∞
-              </BodyText>
-            </SlippageButton>
-          </Flexbox>
-        </Flexbox>
-
-        {/** SWAP BUTTON **/}
-        <Spacer size="xl" />
-        <PrimaryButton
-          fullWidth
-          label={
-            wallet.connected
-              ? isSendingTx
-                ? "Swapping..."
-                : "Swap"
-              : "Connect wallet"
-          }
-          onClick={() => {
-            if (isClientLoading || isSendingTx) return;
-
-            if (wallet.connected) {
-              submitSwap();
-            } else {
-              setIsWalletModalOpen(true);
-            }
-          }}
-          isLoading={isClientLoading}
-          disabled={
-            isClientLoading ||
-            isSendingTx ||
-            (wallet.connected &&
-              (!inputToken || !amountIn || !outputToken || !amountOut))
-          }
-        />
-      </SwapContainer>
-    </>
+    <SwapBuilder
+      // input
+      inputTokenLabel={inputTokenLabel}
+      inputValue={inputValue}
+      inputTokenOptions={tokenOptions}
+      setInputToken={setInputToken}
+      inputTokenDisabled={inputTokenDisabled}
+      inputLabel={inputLabel}
+      balanceInLabel={balanceInLabel}
+      amountIn={amountIn}
+      maxAmountIn={maxAmountIn}
+      setAmountIn={setInputAmount}
+      inputDisabled={inputDisabled}
+      // output
+      outputTokenLabel={outputTokenLabel}
+      outputValue={outputValue}
+      outputTokenOptions={tokenOptions}
+      setOutputToken={setOutputToken}
+      outputTokenDisabled={outputTokenDisabled}
+      outputLabel={outputLabel}
+      balanceOutLabel={balanceOutLabel}
+      amountOut={amountOut}
+      maxAmountOut={maxAmountOut}
+      maxButtonHidden={true}
+      setAmountOut={setOutputAmount}
+      outputDisabled={outputDisabled}
+      // submit
+      submitLabel={submitLabel}
+      submitSwap={submitSwap}
+      isClientLoading={isClientLoading}
+      submitDisabled={submitDisabled}
+      // misc
+      wasTxError={wasTxError}
+      switchInputOutputDisabled={switchInputOutputDisabled}
+      switchInputOutput={switchInputOutput}
+      slippageElement={slippageElement}
+    />
   );
 };

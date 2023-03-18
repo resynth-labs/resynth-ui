@@ -138,23 +138,11 @@ export const Pools = () => {
 
   const switchInputOutputElement = <p style={{ lineHeight: "16.88px" }}>+</p>;
 
-  const getMint = (symbol: string) => {
-    if (symbol === collateral) {
-      return translateAddress(collateralConfiguration.mint);
-    } else {
-      return syntheticMintPDA(
-        client.programId,
-        translateAddress(oracles[symbol].oracle)
-      );
-    }
-  };
   const setInputToken = (symbol: string) => {
-    const mint = getMint(symbol);
-    setMints(mint, symbol, mint2, symbol2);
+    setMints(symbol, symbol2);
   };
   const setOutputToken = (symbol: string) => {
-    const mint = getMint(symbol);
-    setMints(mint1, symbol1, mint, symbol);
+    setMints(symbol1, symbol);
   };
 
   const setAmountIn = (amount: string) => {

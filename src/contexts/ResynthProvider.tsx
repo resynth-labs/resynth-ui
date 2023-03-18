@@ -11,6 +11,7 @@ import {
 import { useNetwork } from "./NetworkProvider";
 import { assert } from "../utils/errors";
 import { PublicKey } from "@solana/web3.js";
+import { translateAddress } from "@coral-xyz/anchor";
 
 /** Accounts of interest to the UI */
 interface Accounts {
@@ -61,12 +62,7 @@ const ResynthContext = createContext<{
   symbol1: string;
   symbol2: string;
   setOracle: (oracle: string) => void;
-  setMints: (
-    mint1: PublicKey,
-    symbol1: string,
-    mint2: PublicKey,
-    symbol2: string
-  ) => void;
+  setMints: (symbol1: string, symbol2: string) => void;
 }>({
   client: {} as ResynthClient,
   tokenSwap: {} as TokenSwapClient,
@@ -152,18 +148,42 @@ export const ResynthProvider = ({
     });
   }
 
-  function updateMints(
-    mint1: PublicKey,
-    symbol1: string,
-    mint2: PublicKey,
-    symbol2: string
-  ) {
+  function updateMints(symbol1: string, symbol2: string) {
     setAccounts((accounts) => {
+      const { oracles, tokens } = client.config;
+      assert(oracles);
+
+      let { oracle, oracleConfiguration, collateral, collateralConfiguration } =
+        accounts;
+
+      // get mints and configurations
+      let mint1: PublicKey;
+      if (symbol1 in oracles) {
+        oracle = symbol1;
+        oracleConfiguration = oracles[symbol1];
+        mint1 = syntheticMintPDA(client.programId, oracles[symbol1].oracle);
+      } else {
+        assert(symbol1 in tokens, "symbol was not found in configuration");
+        collateral = symbol1;
+        collateralConfiguration = tokens[symbol1];
+        mint1 = translateAddress(tokens[symbol1].mint);
+      }
+      let mint2: PublicKey;
+      if (symbol2 in oracles) {
+        oracle = symbol2;
+        oracleConfiguration = oracles[symbol2];
+        mint2 = syntheticMintPDA(client.programId, oracles[symbol2].oracle);
+      } else {
+        assert(symbol2 in tokens, "symbol was not found in configuration");
+        collateral = symbol2;
+        collateralConfiguration = tokens[symbol2];
+        mint2 = translateAddress(tokens[symbol2].mint);
+      }
       return {
-        oracle: accounts.oracle,
-        oracleConfiguration: accounts.oracleConfiguration,
-        collateral: accounts.collateral,
-        collateralConfiguration: accounts.collateralConfiguration,
+        oracle,
+        oracleConfiguration,
+        collateral,
+        collateralConfiguration,
 
         mint1,
         symbol1,

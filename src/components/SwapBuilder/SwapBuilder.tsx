@@ -38,6 +38,7 @@ export interface SwapBuilderProps {
   balanceOutLabel?: string;
   amountOut: string;
   maxAmountOut: number;
+  maxButtonHidden?: boolean;
   setAmountOut: (amount: string) => void;
   outputDisabled: boolean;
 
@@ -79,6 +80,7 @@ export const SwapBuilder = ({
   balanceOutLabel,
   amountOut,
   maxAmountOut,
+  maxButtonHidden,
   setAmountOut,
   outputDisabled,
 
@@ -174,10 +176,14 @@ export const SwapBuilder = ({
             value={amountOut}
             max={maxAmountOut}
             balanceLabel={balanceOutLabel}
-            maxButton={{
-              isActive: !!amountOut && Number(amountOut) === maxAmountOut,
-              onClick: () => setAmountOut(maxAmountOut.toString()),
-            }}
+            maxButton={
+              !maxButtonHidden
+                ? {
+                    isActive: !!amountOut && Number(amountOut) === maxAmountOut,
+                    onClick: () => setAmountOut(maxAmountOut.toString()),
+                  }
+                : undefined
+            }
             onChange={(amount: string) => setAmountOut(amount)}
             needsValue={false}
             error={wasTxError}
@@ -185,14 +191,8 @@ export const SwapBuilder = ({
           />
         </Flexbox>
 
-        {/** SLIPPAGE BUTTON */}
-
         {/** SLIPPAGE **/}
-        {slippageElement && (
-          <Flexbox width="95%" flexColumn marginY="xl">
-            {slippageElement}{" "}
-          </Flexbox>
-        )}
+        {slippageElement}
 
         {/** SWAP BUTTON **/}
         <Spacer size="xl" />
