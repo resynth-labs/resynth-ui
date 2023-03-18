@@ -27,7 +27,7 @@ interface Accounts {
 }
 
 const defaultAccounts: Accounts = {
-  oracle: "nSOL",
+  oracle: "rsSOL",
   oracleConfiguration: {
     class: "Crypto",
     oracle: "H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG",
@@ -46,7 +46,7 @@ const defaultAccounts: Accounts = {
     new PublicKey(ResynthClient.config.resynthProgramId),
     new PublicKey("H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG")
   ),
-  symbol2: "nSOL",
+  symbol2: "rsSOL",
 };
 
 const ResynthContext = createContext<{
