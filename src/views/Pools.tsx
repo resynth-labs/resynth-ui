@@ -138,6 +138,8 @@ export const Pools = () => {
     (wallet.connected &&
       (!inputToken || !amountIn || !outputToken || !amountOut));
 
+  const switchInputOutputElement = <p style={{ lineHeight: "16.88px" }}>+</p>;
+
   const getMint = (symbol: string) => {
     if (symbol === collateral) {
       return translateAddress(collateralConfiguration.mint);
@@ -287,7 +289,7 @@ export const Pools = () => {
       // misc
       wasTxError={wasTxError}
       switchInputOutputDisabled={true}
-      switchInputOutputElement={"+"}
+      switchInputOutputElement={switchInputOutputElement}
       switchInputOutput={() => {}}
       slippageElement={poolInitializeNotice}
     />
