@@ -78,35 +78,37 @@ export const Swap = () => {
   const { oracles, tokens } = client.config;
   assert(oracles);
 
-  function symbolToToken(symbol: string): Token {
-    if (symbol in oracles) {
-      const oracle = oracles[symbol];
-      return {
-        balance: 0,
-        configuration: {
-          mint: syntheticMintPDA(client.programId, oracle.oracle),
-          symbol: symbol,
-          logoUrl: undefined,
-          decimals: SYNTH_DECIMALS,
-        },
-      };
-    } else {
-      assert(symbol in tokens);
-      const token = tokens[symbol];
-      return {
-        balance: 0,
-        configuration: {
-          mint: translateAddress(token.mint),
-          symbol: symbol,
-          logoUrl: undefined,
-          decimals: token.decimals,
-        },
-      };
-    }
-  }
-
   const tokensItems = useMemo(
-    () => [collateral, ...Object.keys(oracles)].map(symbolToToken),
+    () =>
+      [
+        [collateral],
+        ...Object.entries(oracles).filter(([label, oracle]) => oracle.active),
+      ].map(([symbol]) => {
+        if (symbol in oracles) {
+          const oracle = oracles[symbol];
+          return {
+            balance: 0,
+            configuration: {
+              mint: syntheticMintPDA(client.programId, oracle.oracle),
+              symbol: symbol,
+              logoUrl: undefined,
+              decimals: SYNTH_DECIMALS,
+            },
+          };
+        } else {
+          assert(symbol in tokens);
+          const token = tokens[symbol];
+          return {
+            balance: 0,
+            configuration: {
+              mint: translateAddress(token.mint),
+              symbol: symbol,
+              logoUrl: undefined,
+              decimals: token.decimals,
+            },
+          };
+        }
+      }),
     [oracles]
   );
 

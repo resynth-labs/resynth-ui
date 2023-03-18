@@ -71,20 +71,22 @@ export const Mint = () => {
   const collateralOptions = useMemo(() => [collateralValue], []);
   const syntheticOptions = useMemo(
     () =>
-      Object.keys(oracles).map((label) => ({
-        key: label,
-        label: label,
-        leftElement: IMAGES_EXIST ? (
-          <img key={label} width="20px" src={logoUrl(label)} alt={label} />
-        ) : (
-          <UnknownToken key={label} size="20px" />
-        ),
-        // rightElement: (
-        //   <AccentText key={label} size="xs">
-        //     {bigIntToTokens(token.balance, token.configuration.decimals)}
-        //   </AccentText>
-        // ),
-      })),
+      Object.entries(oracles)
+        .filter(([label, oracle]) => oracle.active)
+        .map(([label, oracle]) => ({
+          key: label,
+          label: label,
+          leftElement: IMAGES_EXIST ? (
+            <img key={label} width="20px" src={logoUrl(label)} alt={label} />
+          ) : (
+            <UnknownToken key={label} size="20px" />
+          ),
+          // rightElement: (
+          //   <AccentText key={label} size="xs">
+          //     {bigIntToTokens(token.balance, token.configuration.decimals)}
+          //   </AccentText>
+          // ),
+        })),
     []
   );
 

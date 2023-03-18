@@ -61,7 +61,10 @@ export const Pools = () => {
   }
 
   const tokenOptions = useMemo(() => {
-    return [collateral, ...Object.keys(oracles)].map((label: string) => ({
+    return [
+      [collateral],
+      ...Object.entries(oracles).filter(([lable, oracle]) => oracle.active),
+    ].map(([label]) => ({
       key: label,
       label: label,
       leftElement: IMAGES_EXIST ? (
