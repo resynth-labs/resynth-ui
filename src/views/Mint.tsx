@@ -124,8 +124,23 @@ export const Mint = () => {
   const amountIn = swapType === "mint" ? amountCollateral : amountSynthetic;
   const amountOut = swapType === "mint" ? amountSynthetic : amountCollateral;
 
-  const maxAmountIn = Number.MAX_SAFE_INTEGER;
+  const maxAmountIn = !collateralBalance.isLoadingBalance
+    ? collateralBalance.balance
+    : +amountIn;
+  // FIXME: use margin accounting to find max amount
   const maxAmountOut = Number.MAX_SAFE_INTEGER;
+
+  const balanceInLabel =
+    +amountIn === maxAmountIn ? undefined : collateralBalance.balanceString;
+  // FIXME: use margin accounting to find max amount
+  // const balanceOutLabel =
+  //   +amountOut === maxAmountOut
+  //     ? undefined
+  //     : `Max: ${maxAmountOut.toLocaleString("fullwide", {
+  //         maximumFractionDigits: 1,
+  //       })}`;
+  const balanceOutLabel =
+    +amountOut === maxAmountOut ? undefined : syntheticBalance.balanceString;
 
   const inputTokenDisabled =
     swapType === "mint" || isSendingTx || isClientLoading;
@@ -260,6 +275,7 @@ export const Mint = () => {
       setInputToken={setInputToken}
       inputTokenDisabled={inputTokenDisabled}
       inputLabel={inputLabel}
+      balanceInLabel={balanceInLabel}
       amountIn={amountIn}
       maxAmountIn={maxAmountIn}
       setAmountIn={setAmountIn}
@@ -271,6 +287,7 @@ export const Mint = () => {
       setOutputToken={setOutputToken}
       outputTokenDisabled={outputTokenDisabled}
       outputLabel={outputLabel}
+      balanceOutLabel={balanceOutLabel}
       amountOut={amountOut}
       maxAmountOut={maxAmountOut}
       setAmountOut={setAmountOut}
