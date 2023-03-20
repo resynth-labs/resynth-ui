@@ -1,4 +1,4 @@
-import { Keypair, PublicKey, Transaction } from "@solana/web3.js";
+import { Keypair, PublicKey, Signer, Transaction } from "@solana/web3.js";
 import {
   Fees,
   ResynthClient,
@@ -9,7 +9,7 @@ import {
 import { assert } from "../utils/errors";
 import {
   createApproveInstruction,
-  createAssociatedTokenAccountInstruction,
+  createAssociatedTokenAccountIdempotentInstruction,
   getAssociatedTokenAddressSync,
   unpackAccount,
   unpackMint,
@@ -95,84 +95,94 @@ export const getDepositSwapPoolTransaction = async (
     lastValidBlockHeight,
     feePayer: walletPubkey,
   });
+  const signers: Signer[] = [];
 
   const lptoken = getAssociatedTokenAddressSync(lpmint, walletPubkey);
 
-  // fixme: Don't await while building transaction
-  if (!(await connection.getAccountInfo(lptoken))) {
+  transaction.add(
+    createAssociatedTokenAccountIdempotentInstruction(
+      walletPubkey,
+      lptoken,
+      walletPubkey,
+      lpmint
+    )
+  );
+
+  // FIXME: Call depositAllTokenTypes when mintAAmount > 0 and MintBAmount > 0
+  // FIXME: depositSingleTokenTypeExactAmountInInstruction can exceed slippage
+  // FIXME: Display slippage error in UI
+
+  if (mintAAmount > 0) {
+    const minimumPoolTokenAmountA = tradingTokensToPoolTokens(
+      swapPoolData,
+      mintAAmount,
+      vaultAAmount,
+      Number(lpmintSupply)
+    );
+    const userTransferAuthorityA = Keypair.generate();
+    signers.push(userTransferAuthorityA);
+
     transaction.add(
-      createAssociatedTokenAccountInstruction(
+      createApproveInstruction(
+        tokenA,
+        userTransferAuthorityA.publicKey,
         walletPubkey,
-        lptoken,
-        walletPubkey,
-        lpmint
+        BigInt(mintAAmount)
       )
+    );
+    transaction.add(
+      await tokenSwap.depositSingleTokenTypeExactAmountInInstruction({
+        sourceTokenAmount: new BN(mintAAmount),
+        minimumPoolTokenAmount: new BN(minimumPoolTokenAmountA),
+        swapPool,
+        authority,
+        userTransferAuthority: userTransferAuthorityA.publicKey,
+        tokenA,
+        tokenB: null,
+        vaultA,
+        vaultB,
+        lpmint,
+        lptoken,
+      })
     );
   }
 
-  const minimumPoolTokenAmountA = tradingTokensToPoolTokens(
-    swapPoolData,
-    mintAAmount,
-    vaultAAmount,
-    Number(lpmintSupply)
-  );
-  const userTransferAuthorityA = Keypair.generate();
-  transaction.add(
-    createApproveInstruction(
-      tokenA,
-      userTransferAuthorityA.publicKey,
-      walletPubkey,
-      BigInt(mintAAmount)
-    )
-  );
-  transaction.add(
-    await tokenSwap.depositSingleTokenTypeExactAmountInInstruction({
-      sourceTokenAmount: new BN(mintAAmount),
-      minimumPoolTokenAmount: new BN(minimumPoolTokenAmountA),
-      swapPool,
-      authority,
-      userTransferAuthority: userTransferAuthorityA.publicKey,
-      tokenA,
-      tokenB: null,
-      vaultA,
-      vaultB,
-      lpmint,
-      lptoken,
-    })
-  );
+  if (mintBAmount > 0) {
+    const minimumPoolTokenAmountB = tradingTokensToPoolTokens(
+      swapPoolData,
+      mintBAmount,
+      vaultBAmount,
+      Number(lpmintSupply)
+    );
+    const userTransferAuthorityB = Keypair.generate();
+    signers.push(userTransferAuthorityB);
 
-  const minimumPoolTokenAmountB = tradingTokensToPoolTokens(
-    swapPoolData,
-    mintBAmount,
-    vaultBAmount,
-    Number(lpmintSupply)
-  );
-  const userTransferAuthorityB = Keypair.generate();
-  transaction.add(
-    createApproveInstruction(
-      tokenB,
-      userTransferAuthorityB.publicKey,
-      walletPubkey,
-      BigInt(mintBAmount)
-    )
-  );
-  transaction.add(
-    await tokenSwap.depositSingleTokenTypeExactAmountInInstruction({
-      sourceTokenAmount: new BN(mintBAmount),
-      minimumPoolTokenAmount: new BN(minimumPoolTokenAmountB),
-      swapPool,
-      authority,
-      userTransferAuthority: userTransferAuthorityB.publicKey,
-      tokenA: null,
-      tokenB,
-      vaultA,
-      vaultB,
-      lpmint,
-      lptoken,
-    })
-  );
+    transaction.add(
+      createApproveInstruction(
+        tokenB,
+        userTransferAuthorityB.publicKey,
+        walletPubkey,
+        BigInt(mintBAmount)
+      )
+    );
+    transaction.add(
+      await tokenSwap.depositSingleTokenTypeExactAmountInInstruction({
+        sourceTokenAmount: new BN(mintBAmount),
+        minimumPoolTokenAmount: new BN(minimumPoolTokenAmountB),
+        swapPool,
+        authority,
+        userTransferAuthority: userTransferAuthorityB.publicKey,
+        tokenA: null,
+        tokenB,
+        vaultA,
+        vaultB,
+        lpmint,
+        lptoken,
+      })
+    );
+  }
 
-  transaction.partialSign(userTransferAuthorityA, userTransferAuthorityB);
+  transaction.partialSign(...signers);
 
   return { transaction, lastValidBlockHeight };
 };

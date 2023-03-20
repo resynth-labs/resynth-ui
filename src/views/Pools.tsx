@@ -133,11 +133,11 @@ export const Pools = () => {
       : "Supply"
     : "Connect wallet";
 
+  const bothAmountsEmpty = !(+amountIn > 0) && !(+amountOut > 0);
   const submitDisabled =
     isClientLoading ||
     isSendingTx ||
-    (wallet.connected &&
-      (!inputToken || !amountIn || !outputToken || !amountOut));
+    (wallet.connected && (!inputToken || !outputToken || bothAmountsEmpty));
 
   const switchInputOutputElement = <p style={{ lineHeight: "16.88px" }}>+</p>;
 
