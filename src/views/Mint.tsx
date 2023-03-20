@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTheme } from "styled-components";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useNetwork } from "../contexts/NetworkProvider";
@@ -9,7 +9,7 @@ import { notify } from "../utils/notify";
 import { Flexbox } from "../components/Layout";
 import { ExternalLink, UnknownToken } from "../components/Icons";
 import { useCollateralBalance, useSynthBalance } from "../hooks/useBalance";
-import { assert } from "../utils/errors";
+import { assert, isWalletSignTransactionError } from "../utils/errors";
 import { getMintSyntheticAssetTransaction } from "../actions/mintSyntheticAsset";
 import { SwapBuilder } from "../components/SwapBuilder/SwapBuilder";
 import { sendTransaction } from "../actions/sendTransaction";
@@ -123,19 +123,27 @@ export const Mint = () => {
   const inputValue = swapType === "mint" ? collateralValue : syntheticValue;
   const outputValue = swapType === "mint" ? syntheticValue : collateralValue;
 
+  const balanceIn = swapType === "mint" ? collateralBalance : syntheticBalance;
+  const balanceOut = swapType === "mint" ? syntheticBalance : collateralBalance;
+
   const amountIn = swapType === "mint" ? amountCollateral : amountSynthetic;
   const amountOut = swapType === "mint" ? amountSynthetic : amountCollateral;
 
-  const maxAmountIn = !collateralBalance.isLoadingBalance
+  const maxAmountCollateral = !collateralBalance.isLoadingBalance
     ? collateralBalance.balance
     : +amountIn;
   // FIXME: use margin accounting to find max amount
-  const maxAmountOut = !syntheticBalance.isLoadingBalance
+  const maxAmountSynthetic = !syntheticBalance.isLoadingBalance
     ? Number.MAX_SAFE_INTEGER
     : +amountOut;
 
+  const maxAmountIn =
+    swapType === "mint" ? maxAmountCollateral : maxAmountSynthetic;
+  const maxAmountOut =
+    swapType === "mint" ? maxAmountSynthetic : maxAmountCollateral;
+
   const balanceInLabel =
-    +amountIn === maxAmountIn ? undefined : collateralBalance.balanceString;
+    +amountIn === maxAmountIn ? undefined : balanceIn.balanceString;
   // FIXME: use margin accounting to find max amount
   // const balanceOutLabel =
   //   +amountOut === maxAmountOut
@@ -144,7 +152,7 @@ export const Mint = () => {
   //         maximumFractionDigits: 1,
   //       })}`;
   const balanceOutLabel =
-    +amountOut === maxAmountOut ? undefined : syntheticBalance.balanceString;
+    +amountOut === maxAmountOut ? undefined : balanceOut.balanceString;
 
   const inputTokenDisabled =
     swapType === "mint" || isSendingTx || isClientLoading;
@@ -202,6 +210,10 @@ export const Mint = () => {
     setSwapType((swapType) => (swapType === "mint" ? "burn" : "mint"));
   };
 
+  useEffect(() => {
+    setWasTxError(false);
+  }, [amountIn, amountOut, isSendingTx]);
+
   // Submit swap transaction
   const submitSwap = async () => {
     if (isClientLoading || isSendingTx) {
@@ -219,6 +231,7 @@ export const Mint = () => {
       type: "loading",
     });
 
+    let cancelled = false;
     let txId = "";
     try {
       const { transaction, lastValidBlockHeight } =
@@ -241,7 +254,11 @@ export const Mint = () => {
         lastValidBlockHeight
       );
     } catch (err) {
-      console.error(err);
+      if (isWalletSignTransactionError(err)) {
+        cancelled = true;
+      } else {
+        console.error(err);
+      }
     }
 
     setIsSendingTx(false);
@@ -252,10 +269,13 @@ export const Mint = () => {
           alignItems="center"
           onClick={() => openTxInExplorer(txId, network)}
         >
-          Your swap of {parseFloat(amountIn).toFixed(2)} {inputToken} ⇄{" "}
-          {parseFloat(amountOut).toFixed(2)} {outputToken} was successful.
+          Your mint of {parseFloat(amountOut).toFixed(2)} {outputToken} from{" "}
+          {parseFloat(amountIn).toFixed(2)} {inputToken} collateral was
+          successful.
           <ExternalLink color="base" />
         </Flexbox>
+      ) : cancelled ? (
+        "Your mint was cancelled."
       ) : (
         "There was an error processing your swap."
       ),
@@ -265,7 +285,7 @@ export const Mint = () => {
 
     if (txId) {
       resetSwapData();
-    } else {
+    } else if (!cancelled) {
       setWasTxError(true);
     }
   };

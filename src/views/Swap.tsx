@@ -13,7 +13,7 @@ import { Button } from "../components/Buttons";
 import { ExternalLink, UnknownToken } from "../components/Icons";
 import { PublicKey } from "@solana/web3.js";
 import { useBalance } from "../hooks/useBalance";
-import { assert } from "../utils/errors";
+import { assert, isWalletSignTransactionError } from "../utils/errors";
 import { syntheticMintPDA, SYNTH_DECIMALS } from "@resynth/resynth-sdk";
 import { BN, translateAddress } from "@coral-xyz/anchor";
 import { getSwapTransaction } from "../actions/swap";
@@ -276,6 +276,44 @@ export const Swap = () => {
     setAmountOut(amountIn);
   }
 
+  // Update amounts in/out on change to their compliment
+  // useEffect(() => {
+  // Amount out
+  /*
+    if (swapType === "exactIn" && inputToken && amountIn) {
+      setAmountOut("0");
+      setAmountOut(
+        market
+          .getAmountOut(
+            inputToken.configuration.symbol,
+            Number(amountIn),
+            outputToken.configuration.symbol
+          )
+          .toFixed(outputToken.configuration.decimals)
+      );
+    }
+    */
+  // Amount in
+  /*
+    if (swapType === "exactOut" && outputToken && amountOut) {
+      setAmountIn("0");
+      setAmountIn(
+        market
+          .getAmountIn(
+            inputToken.configuration.symbol,
+            outputToken.configuration.symbol,
+            Number(amountOut)
+          )
+          .toFixed(inputToken.configuration.decimals)
+      );
+    }
+    */
+  // }, [amountIn, amountOut]);
+
+  useEffect(() => {
+    setWasTxError(false);
+  }, [amountIn, amountOut, isSendingTx]);
+
   // Submit swap transaction
   const submitSwap = async () => {
     if (!wallet.publicKey || !wallet.signTransaction) {
@@ -288,6 +326,7 @@ export const Swap = () => {
       type: "loading",
     });
 
+    let cancelled = false;
     let txId = "";
     try {
       const fromLamports = +amountIn * 10 ** inputBalance.decimals;
@@ -311,7 +350,11 @@ export const Swap = () => {
 
       txId = await sendTransaction(connection, signed, lastValidBlockHeight);
     } catch (err) {
-      console.error(err);
+      if (isWalletSignTransactionError(err)) {
+        cancelled = true;
+      } else {
+        console.error(err);
+      }
     }
 
     setIsSendingTx(false);
@@ -327,6 +370,8 @@ export const Swap = () => {
           {outputToken.configuration.symbol} was successful.
           <ExternalLink color="base" />
         </Flexbox>
+      ) : cancelled ? (
+        "Your swap has been cancelled."
       ) : (
         "There was an error processing your swap."
       ),
@@ -336,47 +381,10 @@ export const Swap = () => {
 
     if (txId) {
       resetSwapData();
-    } else {
+    } else if (!cancelled) {
       setWasTxError(true);
     }
   };
-
-  // Update amounts in/out on change to their compliment
-  useEffect(() => {
-    // Amount out
-    /*
-    if (swapType === "exactIn" && inputToken && amountIn) {
-      setAmountOut("0");
-      setAmountOut(
-        market
-          .getAmountOut(
-            inputToken.configuration.symbol,
-            Number(amountIn),
-            outputToken.configuration.symbol
-          )
-          .toFixed(outputToken.configuration.decimals)
-      );
-    }
-    */
-
-    // Amount in
-    /*
-    if (swapType === "exactOut" && outputToken && amountOut) {
-      setAmountIn("0");
-      setAmountIn(
-        market
-          .getAmountIn(
-            inputToken.configuration.symbol,
-            outputToken.configuration.symbol,
-            Number(amountOut)
-          )
-          .toFixed(inputToken.configuration.decimals)
-      );
-    }
-    */
-
-    setWasTxError(false);
-  }, [amountIn, amountOut]);
 
   const slippageElement = (
     <Flexbox width="95%" flexColumn marginY="xl">

@@ -1,4 +1,4 @@
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useNetwork } from "../contexts/NetworkProvider";
 import { useResynth } from "../contexts/ResynthProvider";
@@ -8,11 +8,9 @@ import { notify } from "../utils/notify";
 import { Flexbox } from "../components/Layout";
 import { ExternalLink, UnknownToken } from "../components/Icons";
 import { useBalance } from "../hooks/useBalance";
-import { assert } from "../utils/errors";
+import { assert, isWalletSignTransactionError } from "../utils/errors";
 import { SwapBuilder } from "../components/SwapBuilder/SwapBuilder";
 import { useSwapPool } from "../hooks/useSwapPool";
-import { translateAddress } from "@coral-xyz/anchor";
-import { syntheticMintPDA } from "@resynth/resynth-sdk";
 import { AccentText } from "../components/Typography";
 import { Transaction } from "@solana/web3.js";
 import { getDepositSwapPoolTransaction } from "../actions/depositSwapPool";
@@ -162,6 +160,10 @@ export const Pools = () => {
     setAmountToken2("");
   };
 
+  useEffect(() => {
+    setWasTxError(false);
+  }, [amountIn, amountOut, isSendingTx]);
+
   // Submit swap transaction
   const submitSwap = async () => {
     if (isClientLoading || isSendingTx) {
@@ -179,6 +181,7 @@ export const Pools = () => {
       type: "loading",
     });
 
+    let cancelled = false;
     let txId = "";
     try {
       let transaction: Transaction;
@@ -215,7 +218,11 @@ export const Pools = () => {
         lastValidBlockHeight
       );
     } catch (err) {
-      console.error(err);
+      if (isWalletSignTransactionError(err)) {
+        cancelled = true;
+      } else {
+        console.error(err);
+      }
     }
 
     setIsSendingTx(false);
@@ -226,10 +233,12 @@ export const Pools = () => {
           alignItems="center"
           onClick={() => openTxInExplorer(txId, network)}
         >
-          Your swap of {parseFloat(amountIn).toFixed(2)} {inputToken} ⇄{" "}
+          Your deposit of {parseFloat(amountIn).toFixed(2)} {inputToken} ⇄{" "}
           {parseFloat(amountOut).toFixed(2)} {outputToken} was successful.
           <ExternalLink color="base" />
         </Flexbox>
+      ) : cancelled ? (
+        "Your deposit has been cancelled."
       ) : (
         "There was an error processing your swap."
       ),
@@ -239,7 +248,7 @@ export const Pools = () => {
 
     if (txId) {
       resetSwapData();
-    } else {
+    } else if (!cancelled) {
       setWasTxError(true);
     }
   };
