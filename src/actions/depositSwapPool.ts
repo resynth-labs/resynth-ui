@@ -1,7 +1,7 @@
 import { Keypair, PublicKey, Signer, Transaction } from "@solana/web3.js";
 import {
-  Fees,
   ResynthClient,
+  SwapPool,
   swapPoolPDA,
   TokenSwapClient,
   tradingTokensToPoolTokens,
@@ -11,8 +11,6 @@ import {
   createApproveInstruction,
   createAssociatedTokenAccountIdempotentInstruction,
   getAssociatedTokenAddressSync,
-  unpackAccount,
-  unpackMint,
 } from "@solana/spl-token";
 import { BN } from "@coral-xyz/anchor";
 
@@ -47,48 +45,33 @@ export const getDepositSwapPoolTransaction = async (
   const tokenA = mint1.equals(mintA) ? source1 : source2;
   const tokenB = mint1.equals(mintA) ? source2 : source1;
 
-  const [
-    [swapPoolInfo, mintAInfo, mintBInfo, vaultAInfo, vaultBInfo, lpmintInfo],
-    { blockhash, lastValidBlockHeight },
-  ] = await Promise.all([
-    connection.getMultipleAccountsInfo([
-      swapPool,
-      mintA,
-      mintB,
-      vaultA,
-      vaultB,
-      lpmint,
-    ]),
-    connection.getLatestBlockhash("finalized"),
-  ]);
+  const [swapPoolInfo, { blockhash, lastValidBlockHeight }] = await Promise.all(
+    [
+      connection.getAccountInfo(swapPool),
+      connection.getLatestBlockhash("finalized"),
+    ]
+  );
 
   assert(swapPoolInfo);
-  assert(mintAInfo);
-  assert(mintBInfo);
-  assert(vaultAInfo);
-  assert(vaultBInfo);
-  assert(lpmintInfo);
-
   const swapPoolData = tokenSwap.program.coder.accounts.decode(
     "swapPool",
     swapPoolInfo.data
-  );
-  const mintADecimals = unpackMint(mint1, mintAInfo).decimals;
-  const mintBDecimals = unpackMint(mint2, mintBInfo).decimals;
+  ) as SwapPool;
+
+  const {
+    mintADecimals,
+    mintBDecimals,
+    vaultABalance,
+    vaultBBalance,
+    lpmintSupply,
+  } = swapPoolData;
   const mintAAmount =
     (mint1.equals(mintA) ? mint1Amount : mint2Amount) * 10 ** mintADecimals;
   const mintBAmount =
     (mint1.equals(mintA) ? mint2Amount : mint1Amount) * 10 ** mintBDecimals;
 
-  const vaultAAmount = Number(unpackAccount(vaultA, vaultAInfo).amount);
-  const vaultBAmount = Number(unpackAccount(vaultB, vaultBInfo).amount);
-  const { decimals: lpmintDecimals, supply: lpmintSupply } = unpackMint(
-    lpmint,
-    lpmintInfo
-  );
-
-  assert(mintA.equals(mintA));
-  assert(mintB.equals(mintB));
+  assert(mintA.equals(swapPoolData.mintA));
+  assert(mintB.equals(swapPoolData.mintB));
 
   const transaction = new Transaction({
     blockhash,
@@ -98,7 +81,6 @@ export const getDepositSwapPoolTransaction = async (
   const signers: Signer[] = [];
 
   const lptoken = getAssociatedTokenAddressSync(lpmint, walletPubkey);
-
   transaction.add(
     createAssociatedTokenAccountIdempotentInstruction(
       walletPubkey,
@@ -116,7 +98,7 @@ export const getDepositSwapPoolTransaction = async (
     const minimumPoolTokenAmountA = tradingTokensToPoolTokens(
       swapPoolData,
       mintAAmount,
-      vaultAAmount,
+      +vaultABalance.toString(),
       Number(lpmintSupply)
     );
     const userTransferAuthorityA = Keypair.generate();
@@ -151,7 +133,7 @@ export const getDepositSwapPoolTransaction = async (
     const minimumPoolTokenAmountB = tradingTokensToPoolTokens(
       swapPoolData,
       mintBAmount,
-      vaultBAmount,
+      +vaultBBalance.toString(),
       Number(lpmintSupply)
     );
     const userTransferAuthorityB = Keypair.generate();

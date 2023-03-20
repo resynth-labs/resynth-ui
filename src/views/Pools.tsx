@@ -240,7 +240,7 @@ export const Pools = () => {
       ) : cancelled ? (
         "Your deposit has been cancelled."
       ) : (
-        "There was an error processing your swap."
+        "There was an error processing your deposit."
       ),
       type: txId ? "success" : "error",
       style: txId ? { cursor: "pointer" } : undefined,

@@ -269,15 +269,23 @@ export const Mint = () => {
           alignItems="center"
           onClick={() => openTxInExplorer(txId, network)}
         >
-          Your mint of {parseFloat(amountOut).toFixed(2)} {outputToken} from{" "}
-          {parseFloat(amountIn).toFixed(2)} {inputToken} collateral was
-          successful.
+          {swapType === "mint"
+            ? `Your mint of ${parseFloat(amountOut).toFixed(
+                2
+              )} ${outputToken} from ${parseFloat(amountIn).toFixed(
+                2
+              )} ${inputToken} collateral was successful.`
+            : `Your burn of ${parseFloat(amountIn).toFixed(
+                2
+              )} ${inputToken} and withdrawal of ${parseFloat(
+                amountOut
+              ).toFixed(2)} ${outputToken} collateral was successful.`}
           <ExternalLink color="base" />
         </Flexbox>
       ) : cancelled ? (
-        "Your mint was cancelled."
+        `Your ${swapType} has been cancelled.`
       ) : (
-        "There was an error processing your swap."
+        `There was an error processing your ${swapType}.`
       ),
       type: txId ? "success" : "error",
       style: txId ? { cursor: "pointer" } : undefined,
